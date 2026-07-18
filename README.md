@@ -9,6 +9,12 @@ Wave2Body learns three interfaces:
 2. a body-part pose tokenizer;
 3. a radar-to-body token translator followed by an absolute localization head.
 
+![Wave2Body architecture: translating continuous mmWave radar tokens into discrete body tokens for global 3D pose estimation](assets/wave2body_overview.png)
+
+*Wave2Body reformulates mmWave HPE from direct coordinate regression to
+radar-to-body token translation. The body encoder used to construct training
+targets is omitted here; see the paper for the complete training recipe.*
+
 This repository contains the reusable package, training and evaluation
 launchers, paper configurations, baseline ports, ablations, and visualization
 code. Checkpoints, datasets, caches, and generated experiment outputs are kept
