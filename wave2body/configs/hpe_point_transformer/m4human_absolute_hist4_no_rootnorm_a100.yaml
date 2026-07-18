@@ -1,0 +1,18 @@
+# RTX 4090 24GB direct PointTransformer baseline for M4Human hist4.
+# Radar input and pose targets stay in absolute radar-frame coordinates.
+
+base_config: m4human_absolute_hist4_s2_bf16.yaml
+
+data_format:
+  normalized: false
+  input_root_normalized: false
+  input_root_crop: false
+  target_root_normalized: false
+
+training:
+  run_name: m4human_hpe_pt_abs_s2_hist4_norootnorm_e25_bf16_bs64
+  batch_size: 64
+  num_workers: 16
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2

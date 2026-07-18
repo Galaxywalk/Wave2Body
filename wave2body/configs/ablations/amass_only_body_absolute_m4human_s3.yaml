@@ -1,0 +1,9 @@
+# M4Human s3 absolute stage with an AMASS-only body tokenizer.
+
+base_config: amass_only_body_absolute_m4human_s2.yaml
+
+m4human:
+  split: s3
+
+training:
+  run_name: m4human_s3_k96_amass_only_bodytoken_queryroot_absolute_e25_bf16_bs1024

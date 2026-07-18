@@ -1,0 +1,72 @@
+# mmDiff baseline model port for MMBody-style radar point clouds.
+#
+# Status: graph-conditioned denoiser and Wave2Body encoder contract are
+# implemented under wave2body.models. Full paper reproduction still requires the
+# upstream pretrained/data artifacts or a from-scratch training run.
+
+baseline:
+  name: mmdiff
+
+dataset:
+  name: mmbody
+dataset_path: dataset://mmbody
+
+data_format:
+  merge_nframes: 4
+  radar_input_c: 5
+  n_points: 256
+  num_joints: 22
+  normalized: false
+  input_root_normalized: false
+  input_root_crop: true
+  input_root_crop_x_range: [-1.0, 1.0]
+  input_root_crop_y_range: [-1.0, 1.0]
+  input_root_crop_z_range: [-1.0, 1.0]
+  target_root_normalized: false
+
+mmdiff:
+  num_joints: 22
+  radar_input_dim: 5
+  condition_dim: 64
+  hidden_dim: 96
+  history_frames: 6
+  num_layers: 5
+  num_heads: 4
+  dropout: 0.25
+  local_points: 50
+
+mmdiff_loss:
+  pose_weight: 1.0
+  coarse_weight: 0.0
+  history_weight: 0.0
+  limb_weight: 0.0
+  reduction: mse
+
+training:
+  stage: hpe_mmdiff
+  run_name: mmbody_mmdiff_absmpjpe_j22_rootcrop_pts256_e25_bf16_bs256
+  batch_size: 256
+  epochs: 25
+  lr: 0.00002
+  optimizer: adam
+  num_workers: 8
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  amp: true
+  precision: bf16
+  tf32: true
+  matmul_precision: high
+  compile:
+    enabled: false
+  log_interval: 20
+  seed: 42
+  train_val_split:
+    enabled: true
+    protocol: heldout_train_sequences
+    val_ratio: 0.15
+    split_seed: 42
+
+evaluation:
+  primary_metric: mpjpe_mm
+  diagnostic_metrics: [mpjpe_mm, total_loss, pose_loss]

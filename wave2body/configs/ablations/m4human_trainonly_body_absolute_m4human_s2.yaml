@@ -1,0 +1,10 @@
+# M4Human s2 absolute-stage ablation with M4Human s2/train-only body tokenizer.
+
+base_config: ../hpe_token/m4human_s2_k96_queryroot_pointiwmean_absolute_trainable_translator_trainonly_tokenizers.yaml
+
+training:
+  run_name: m4human_s2_k96_m4human_trainonly_bodytoken_queryroot_absolute_e25_bf16_bs1024_trainonly_tokenizers
+
+pretrained:
+  vqvae: workspace://vqvae/checkpoints/stage_a_part_k96_m4human_s2_trainonly_param_joints/best_model.pth
+  hpe_token: artifact://experiments/ablation_components_current/results/m4human_s2_k96_m4human_trainonly_bodytoken_xattn_e25_bf16_bs192_trainonly_tokenizers/checkpoints/best.pth

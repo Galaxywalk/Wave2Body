@@ -1,0 +1,93 @@
+seed: 42
+
+data:
+  train_ratio: 0.9
+  dataset_device: cpu
+  batch_loader: tensor
+  use_cache: true
+  cache_build_workers: 8
+  cache_build_chunk_size: 4096
+  cache_dir: workspace://vqvae/cache/joint_cache_amass_mmbody_m4human_k96
+  dataset_configs:
+    - name: MMBody_train
+      type: mmbody
+      path: dataset://mmbody
+      params:
+        splits: [train]
+    - name: M4Human_s3_train
+      type: m4human
+      path: dataset://m4human
+      params:
+        split_id: s3
+        subset: train
+        smplx_model_root: dataset://m4human/models
+        temporal_window: 4
+        pose_source: smplx
+        lmdb_readahead: true
+        normalize_z: true
+        normalized: true
+
+model:
+  model_type: part
+  num_joints: 22
+  input_dim: 3
+  token_num: 24
+  token_dim: 256
+  token_class_num: 480
+  part_hidden_dim: 512
+  part_dropout: 0.1
+  quantizer_type: ema_reset
+  ema_decay: 0.99
+  reset_threshold: 1.0
+  reset_noise_std: 0.01
+  reset_min_active_frac: 0.0
+  init_from_data: true
+  root_index: 0
+  part_token_layout_order: [L_Leg, R_Leg, SpineCore, L_Arm, R_Arm]
+  part_joints:
+    L_Leg: [1, 4, 7, 10]
+    R_Leg: [2, 5, 8, 11]
+    SpineCore: [3, 6, 9, 12, 15]
+    L_Arm: [9, 13, 16, 18, 20]
+    R_Arm: [9, 14, 17, 19, 21]
+  part_token_num:
+    L_Leg: 5
+    R_Leg: 5
+    SpineCore: 4
+    L_Arm: 5
+    R_Arm: 5
+  part_codebook_size: 96
+  drop_rate: 0.1
+
+loss:
+  recon_weight: 1.0
+  vq_weight: 1.0
+  commitment_weight: 0.25
+  recon_loss_type: mse
+
+training:
+  epochs: 10
+  batch_size: 2048
+  num_workers: 8
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  grad_accum_steps: 1
+  log_interval: 20
+  quantizer_log_interval: 50
+  val_quantizer_log_interval: 50
+  save_interval: 5
+  amp: true
+  precision: bf16
+  tf32: true
+  matmul_precision: high
+  compile:
+    enabled: false
+  optimizer:
+    lr: 0.001
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+    fused: true
+  scheduler:
+    T_max: 10
+    eta_min: 1.0e-5

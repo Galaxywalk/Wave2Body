@@ -1,0 +1,21 @@
+# M4Human s3/train-only K96 body-part VQ-VAE for no-leak component ablations.
+
+base_config: stage_a_part_k96_m4human_s2_trainonly_param_joints.yaml
+
+data:
+  cache_dir: workspace://vqvae/cache/joint_cache_m4human_s3_trainonly_param_joints_k96
+  dataset_configs:
+    - name: M4Human_s3_trainonly_param_joints
+      type: m4human
+      path: dataset://m4human
+      params:
+        split_id: s3
+        subset: train
+        smplx_model_root: dataset://m4human/models
+        temporal_window: 4
+        pose_source: param_joints
+        lmdb_readahead: true
+        normalize_z: true
+        normalized: true
+        cache_build_workers: 8
+        cache_build_chunk_size: 4096

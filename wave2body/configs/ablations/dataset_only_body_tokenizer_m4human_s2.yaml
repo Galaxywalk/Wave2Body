@@ -1,0 +1,65 @@
+# M4Human-full K96 body-part VQ-VAE for component ablation.
+#
+# Dataset-only prior uses all M4Human subsets as an unsupervised pose pool.
+# Keep pose_source=smplx to match the production human-body tokenizer target.
+
+base_config: ../human_pose_tokenizer/stage_a_part_k96_amass_mmbody_m4human.yaml
+
+data:
+  train_ratio: 0.9
+  dataset_device: cpu
+  batch_loader: tensor
+  use_cache: true
+  cache_build_workers: 8
+  cache_build_chunk_size: 4096
+  cache_dir: workspace://vqvae/cache/joint_cache_m4human_full_k96
+  dataset_configs:
+    - name: M4Human_all_train
+      type: m4human
+      path: dataset://m4human
+      params:
+        split_id: s1
+        subset: train
+        smplx_model_root: dataset://m4human/models
+        temporal_window: 4
+        pose_source: smplx
+        lmdb_readahead: true
+        normalize_z: true
+        normalized: true
+        cache_build_workers: 8
+        cache_build_chunk_size: 4096
+    - name: M4Human_all_val
+      type: m4human
+      path: dataset://m4human
+      params:
+        split_id: s1
+        subset: val
+        smplx_model_root: dataset://m4human/models
+        temporal_window: 4
+        pose_source: smplx
+        lmdb_readahead: true
+        normalize_z: true
+        normalized: true
+        cache_build_workers: 8
+        cache_build_chunk_size: 4096
+    - name: M4Human_all_test
+      type: m4human
+      path: dataset://m4human
+      params:
+        split_id: s1
+        subset: test
+        smplx_model_root: dataset://m4human/models
+        temporal_window: 4
+        pose_source: smplx
+        lmdb_readahead: true
+        normalize_z: true
+        normalized: true
+        cache_build_workers: 8
+        cache_build_chunk_size: 4096
+
+training:
+  epochs: 30
+  batch_size: 2048
+  scheduler:
+    T_max: 30
+    eta_min: 1.0e-5

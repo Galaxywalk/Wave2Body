@@ -1,0 +1,23 @@
+# AMASS-only K96 body-part VQ-VAE for component ablation.
+
+base_config: ../human_pose_tokenizer/stage_a_part_k96_amass_mmbody_m4human.yaml
+
+data:
+  datasets:
+    - AMASS_KIT
+    - AMASS_BMLmovi
+    - AMASS_BMLrub
+    - AMASS_CMU
+    - AMASS_MOYO
+    - AMASS_GRAB
+    - AMASS_MoSh
+    - AMASS_PosePrior
+    - AMASS_WEIZMANN
+  cache_dir: workspace://vqvae/cache/joint_cache_amass_mmbody_m4human_k96
+
+training:
+  epochs: 30
+  batch_size: 16384
+  scheduler:
+    T_max: 30
+    eta_min: 1.0e-5

@@ -1,0 +1,18 @@
+# MMBody direct PointTransformer no-input-rootnorm control with reusable tensor cache.
+
+base_config: mmbody_pt_noinput_rootnorm.yaml
+
+data:
+  cache:
+    mode: cpu_tensor
+    path: artifact://cache/mmbody_dataset_tensors
+    build_workers: 16
+    build_batch_size: 512
+    build_prefetch_factor: 4
+
+training:
+  run_name: mmbody_hpe_pt_noinput_rootnorm_targetroot_fastcache_e25_bf16_bs256
+  num_workers: 0
+  pin_memory: true
+  persistent_workers: false
+  prefetch_factor: 2

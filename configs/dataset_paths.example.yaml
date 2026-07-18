@@ -1,0 +1,6 @@
+# Copy this file to configs/dataset_paths.local.yaml and fill every path.
+datasets:
+  m4human: /path/to/m4human
+  mmbody: /path/to/mmbody
+  amass_preproc: /path/to/amass/preprocessed
+  amass_all_motions: /path/to/amass/all_motions_fps60.pkl

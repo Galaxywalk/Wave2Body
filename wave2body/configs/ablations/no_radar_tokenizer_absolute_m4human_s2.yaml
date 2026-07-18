@@ -1,0 +1,42 @@
+# Absolute-pose stage for the M4Human S2 raw-point tokenizer ablation.
+
+base_config: no_radar_tokenizer_hpe_m4human_s2.yaml
+
+coord_transform: m4human_radar_absolute_z_shifted_no_radar_tokenizer_queryroot_iwmean_root
+
+root_head:
+  architecture: query_attn
+  attention_hidden_dim: 256
+  attention_heads: 4
+  num_query_tokens: 4
+  hidden_dim: 256
+  num_layers: 3
+  dropout: 0.1
+  use_centers: true
+  point_stats_dim: 19
+  prior_mode: point_intensity_weighted_mean
+  residual_scale: 1.0
+
+training:
+  stage: absolute_root_head
+  stage_display_name: Absolute Root Head Ablation
+  metric_namespace: absolute_root_head
+  run_name: m4human_s2_k96_no_radar_tokenizer_queryroot_absolute_e25_bf16_bs1024
+  freeze_mmwave_tokenizer: true
+  freeze_token_translator: false
+  translator_lr_mult: 1.0
+  root_head_lr_mult: 6.0
+  root_loss_weight: 1.0
+  absolute_pose_loss_weight: 0.25
+
+pretrained:
+  mmwave_tokenizer: null
+  vqvae: null
+  hpe_token: null
+
+evaluation:
+  primary_metric: absolute_mpjpe
+  diagnostic_metrics: [absolute_mpjpe, root_error, root_aligned_mpjpe, p_mpjpe]
+  compute_p_mpjpe: true
+  root_index: 0
+  m4human_action_groups: true

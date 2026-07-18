@@ -1,0 +1,34 @@
+# M4Human s2/train-only K96 body-part VQ-VAE for no-leak component ablations.
+
+base_config: stage_a_part_k96_amass_mmbody_m4human.yaml
+
+data:
+  train_ratio: 0.9
+  dataset_device: cpu
+  batch_loader: tensor
+  use_cache: true
+  cache_build_workers: 8
+  cache_build_chunk_size: 4096
+  cache_dir: workspace://vqvae/cache/joint_cache_m4human_s2_trainonly_param_joints_k96
+  dataset_configs:
+    - name: M4Human_s2_trainonly_param_joints
+      type: m4human
+      path: dataset://m4human
+      params:
+        split_id: s2
+        subset: train
+        smplx_model_root: dataset://m4human/models
+        temporal_window: 4
+        pose_source: param_joints
+        lmdb_readahead: true
+        normalize_z: true
+        normalized: true
+        cache_build_workers: 8
+        cache_build_chunk_size: 4096
+
+training:
+  epochs: 30
+  batch_size: 2048
+  scheduler:
+    T_max: 30
+    eta_min: 1.0e-5

@@ -1,0 +1,3 @@
+# Compatibility wrapper for the M4Human-full dataset-only body tokenizer.
+
+base_config: dataset_only_body_tokenizer_m4human_s2.yaml

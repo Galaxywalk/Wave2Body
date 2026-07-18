@@ -1,0 +1,24 @@
+# MMBody direct PointTransformer absolute-pose control with raw-input coordinates.
+#
+# This is the final no-input-rootnorm / no-target-rootnorm PT baseline:
+# raw mmWave coordinates supervise raw absolute GT pose directly.
+
+base_config: mmbody_pt_noinput_rootnorm_fastcache.yaml
+
+data_format:
+  normalized: true
+  input_root_normalized: false
+  input_root_crop: true
+  input_root_crop_x_range: [-1.0, 1.0]
+  input_root_crop_y_range: [-1.0, 1.0]
+  input_root_crop_z_range: [-1.0, 1.0]
+  target_root_normalized: false
+
+training:
+  run_name: mmbody_hpe_pt_noinput_abs_fastcache_e25_bf16_bs256
+
+evaluation:
+  mpjpe_only: true
+  primary_metric: absolute_mpjpe
+  diagnostic_metrics: [absolute_mpjpe, root_error, root_aligned_mpjpe]
+  root_index: 0

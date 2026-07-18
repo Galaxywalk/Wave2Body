@@ -1,0 +1,65 @@
+random_seed: 42
+
+dataset:
+  name: m4human
+
+dataset_path: dataset://m4human
+
+m4human:
+  cached_root: dataset://m4human
+  smplx_model_root: dataset://m4human/models
+  split: s2
+  temporal_window: 4
+  normalize_z: true
+  random_sample_train: true
+  intensity_scale: 1.0
+  max_samples:
+    train: null
+    val: null
+    test: null
+
+data_format:
+  n_points: 1024
+  merge_nframes: 4
+  normalized: true
+  radar_input_c: 4
+  num_joints: 22
+
+mmwave_tokenizer:
+  method: mae
+  patch_policy: spatial_fps_knn
+  input_channels: 4
+  num_groups: 96
+  group_size: 32
+  latent_dim: 128
+  hidden_dim: 128
+  transformer_depth: 2
+  num_heads: 4
+  dropout: 0.05
+  mask_ratio: 0.6
+  chamfer_weight: 1.0
+  feature_weight: 0.1
+
+training:
+  run_name: m4human_s2_mae_spatial_k96_bf16_bs64
+  batch_size: 64
+  epochs: 80
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  grad_norm: 1.0
+  num_workers: 8
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  amp: true
+  precision: bf16
+  tf32: true
+  matmul_precision: high
+  compile:
+    enabled: false
+    mode: reduce-overhead
+    dynamic: false
+    fullgraph: false
+
+evaluation:
+  export_token_preview: true

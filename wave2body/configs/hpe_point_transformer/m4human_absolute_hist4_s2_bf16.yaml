@@ -1,0 +1,82 @@
+random_seed: 43
+
+dataset:
+  name: m4human
+
+dataset_path: dataset://m4human
+coord_transform: m4human_radar_absolute_z_shifted_no_root_normalization
+
+m4human:
+  cached_root: dataset://m4human
+  smplx_model_root: dataset://m4human/models
+  split: s2
+  frame_mode: hist4
+  temporal_offsets: [-3, -2, -1, 0]
+  temporal_window: 4
+  normalize_z: true
+  pose_source: param_joints
+  random_sample_train: true
+  intensity_scale: 1.0
+  max_samples:
+    train: null
+    val: null
+    test: null
+
+point_transformer:
+  data_format:
+    radar_input_c: 4
+    num_joints: 22
+  model:
+    scale: base
+    dropout: 0.1
+    nneighbor: 16
+
+data_format:
+  n_points: 1024
+  merge_nframes: 4
+  normalized: false
+  radar_input_c: 4
+  num_joints: 22
+
+training:
+  stage: hpe_point_transformer
+  run_name: m4human_hpe_pt_abs_s2_hist4_e25_bf16_bs224
+  batch_size: 224
+  grad_accum_steps: 1
+  epochs: 25
+  lr: 3.0e-4
+  min_lr: 1.0e-6
+  scheduler: cosine
+  warmup_epochs: 5
+  weight_decay: 1.0e-4
+  grad_norm: 1.0
+  num_workers: 16
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  amp: true
+  precision: bf16
+  tf32: true
+  matmul_precision: high
+  compile:
+    enabled: false
+    mode: reduce-overhead
+    dynamic: false
+    fullgraph: false
+  log_interval: 20
+  val_freq: 1
+  seed: 43
+  train_val_split:
+    enabled: false
+    val_split: val
+
+evaluation:
+  mpjpe_only: true
+  m4human_action_groups: true
+  primary_metric: absolute_mpjpe
+  diagnostic_metrics: [absolute_mpjpe, root_error, root_aligned_mpjpe, p_mpjpe]
+  compute_p_mpjpe: true
+  root_index: 0
+
+pretrained:
+  point_transformer: null

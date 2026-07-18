@@ -1,0 +1,36 @@
+# M4Human s2 no-body-token relative+root ablation.
+#
+# Reuses the frozen K96 mmWave tokenizer plus pooled MLP no-body network, but
+# predicts pelvis-centered pose first and composes absolute pose with the
+# production Wave2Body query-attention root head.
+
+base_config: no_body_token_m4human_s2.yaml
+
+coord_transform: m4human_radar_absolute_z_shifted_no_body_token_relative_queryroot_iwmean_root
+
+data_format:
+  target_root_normalized: true
+
+root_head:
+  architecture: query_attn
+  attention_hidden_dim: 256
+  attention_heads: 4
+  num_query_tokens: 4
+  hidden_dim: 256
+  num_layers: 3
+  dropout: 0.1
+  use_centers: true
+  point_stats_dim: 19
+  prior_mode: point_intensity_weighted_mean
+  residual_scale: 1.0
+
+training:
+  stage: ablation_no_body_relative_root
+  run_name: m4human_s2_k96_no_body_token_pooled_mlp_relative_queryroot_absolute_e25_bf16_bs1024
+  relative_pose_loss_weight: 1.0
+  absolute_pose_loss_weight: 0.25
+  root_loss_weight: 1.0
+  root_head_lr_mult: 6.0
+
+evaluation:
+  diagnostic_metrics: [absolute_mpjpe, root_error, root_aligned_mpjpe, relative_mpjpe, oracle_root_mpjpe, p_mpjpe]

@@ -1,0 +1,24 @@
+# RTX 4090 24GB direct PointTransformer baseline for MMBody.
+# Keeps raw input coordinates and supervises raw absolute GT pose directly.
+
+base_config: mmbody_pt_noinput_abs_fastcache.yaml
+
+data_format:
+  normalized: true
+  input_root_normalized: false
+  input_root_crop: true
+  input_root_crop_x_range: [-1.0, 1.0]
+  input_root_crop_y_range: [-1.0, 1.0]
+  input_root_crop_z_range: [-1.0, 1.0]
+  target_root_normalized: false
+
+training:
+  run_name: mmbody_hpe_pt_noinput_abs_fastcache_scratch_e25_bf16_bs320
+  batch_size: 320
+  num_workers: 0
+  pin_memory: true
+  persistent_workers: false
+  prefetch_factor: 2
+
+pretrained:
+  point_transformer: null

@@ -1,0 +1,12 @@
+# M4Human s2 absolute stage with the M4Human-full dataset-only body tokenizer.
+
+base_config: ../hpe_token/m4human_s2_k96_queryroot_pointiwmean_absolute_trainable_translator.yaml
+
+coord_transform: m4human_radar_absolute_z_shifted_dataset_only_bodytoken_queryroot_iwmean_root
+
+training:
+  run_name: m4human_s2_k96_dataset_only_bodytoken_queryroot_absolute_e25_bf16_bs1024
+
+pretrained:
+  hpe_token: null
+  vqvae: null

@@ -1,0 +1,15 @@
+# MMBody direct PointTransformer with raw-input coordinates and root-normalized target pose.
+
+base_config: mmbody_pt_rootnorm.yaml
+
+data_format:
+  normalized: true
+  input_root_normalized: false
+  input_root_crop: true
+  input_root_crop_x_range: [-1.0, 1.0]
+  input_root_crop_y_range: [-1.0, 1.0]
+  input_root_crop_z_range: [-1.0, 1.0]
+  target_root_normalized: true
+
+training:
+  run_name: mmbody_hpe_pt_noinput_rootnorm_targetroot_e25_bf16_bs256

@@ -1,0 +1,58 @@
+random_seed: 42
+
+dataset:
+  name: mmbody
+
+dataset_path: dataset://mmbody
+
+data_format:
+  n_points: 200
+  merge_nframes: 3
+  normalized: true
+  input_root_normalized: false
+  radar_input_c: 5
+  num_joints: 22
+
+mmwave_tokenizer:
+  method: mae
+  patch_policy: spatial_fps_knn
+  input_channels: 5
+  num_groups: 96
+  group_size: 32
+  latent_dim: 128
+  hidden_dim: 128
+  transformer_depth: 2
+  num_heads: 4
+  dropout: 0.05
+  mask_ratio: 0.6
+  chamfer_weight: 1.0
+  feature_weight: 0.1
+
+training:
+  run_name: mmbody_mae_spatial_k96_bf16_bs1024_w8_pf4
+  batch_size: 1024
+  epochs: 80
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  grad_norm: 1.0
+  num_workers: 8
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 4
+  amp: true
+  precision: bf16
+  tf32: true
+  matmul_precision: high
+  compile:
+    enabled: false
+    mode: reduce-overhead
+    dynamic: false
+    fullgraph: false
+  train_val_split:
+    enabled: true
+    protocol: heldout_train_sequences
+    val_ratio: 0.15
+    split_seed: 42
+
+evaluation:
+  export_token_preview: true

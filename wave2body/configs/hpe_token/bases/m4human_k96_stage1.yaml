@@ -1,0 +1,141 @@
+# M4Human K96 Stage 1 HPE-token translator base.
+#
+# Current split-specific recipes inherit this file and only set the split and
+# run name. Historical center-concat and non-production translator variants
+# live under ../baselines/.
+
+random_seed: 42
+
+dataset:
+  name: m4human
+
+dataset_path: dataset://m4human
+
+m4human:
+  cached_root: dataset://m4human
+  smplx_model_root: dataset://m4human/models
+  split: s2
+  temporal_window: 4
+  normalize_z: true
+  pose_source: param_joints
+  random_sample_train: true
+  intensity_scale: 1.0
+  max_samples:
+    train: null
+    val: null
+    test: null
+
+data_format:
+  n_points: 1024
+  merge_nframes: 4
+  normalized: true
+  input_root_normalized: false
+  input_root_crop: false
+  target_root_normalized: true
+  radar_input_c: 4
+  num_joints: 22
+
+mmwave_tokenizer:
+  method: mae
+  patch_policy: spatial_fps_knn
+  input_channels: 4
+  num_groups: 96
+  group_size: 32
+  latent_dim: 128
+  hidden_dim: 128
+  transformer_depth: 2
+  num_heads: 4
+  dropout: 0.05
+  mask_ratio: 0.6
+  chamfer_weight: 1.0
+  feature_weight: 0.1
+
+sensor_tokens:
+  mode: token_only
+  zero_invalid: true
+
+token_translator:
+  architecture: cross_attention
+  use_sdpa: true
+  mmwave_token_dim: 128
+  pose_token_dim: 256
+  num_pose_tokens: 24
+  num_mmwave_tokens: 96
+  hidden_dim: 256
+  num_cross_attn_layers: 4
+  num_self_attn_layers: 2
+  heads: 8
+  dim_head: 64
+  mlp_ratio: 4.0
+  dropout: 0.1
+  use_rms_norm: true
+  codebook_size: 480
+
+vqvae:
+  model_type: part
+  num_joints: 22
+  input_dim: 3
+  token_num: 24
+  token_dim: 256
+  token_class_num: 480
+  part_hidden_dim: 512
+  part_dropout: 0.1
+  quantizer_type: ema_reset
+  ema_decay: 0.99
+  reset_threshold: 1.0
+  reset_noise_std: 0.01
+  reset_min_active_frac: 0.0
+  init_from_data: true
+  root_index: 0
+  part_token_layout_order: [L_Leg, R_Leg, SpineCore, L_Arm, R_Arm]
+  part_joints:
+    L_Leg: [1, 4, 7, 10]
+    R_Leg: [2, 5, 8, 11]
+    SpineCore: [3, 6, 9, 12, 15]
+    L_Arm: [9, 13, 16, 18, 20]
+    R_Arm: [9, 14, 17, 19, 21]
+  part_token_num:
+    L_Leg: 5
+    R_Leg: 5
+    SpineCore: 4
+    L_Arm: 5
+    R_Arm: 5
+  part_codebook_size: 96
+  drop_rate: 0.1
+
+training:
+  stage: hpe_token
+  stage_display_name: HPE Token
+  metric_namespace: hpe_token
+  run_name: m4human_hpe_token_p1_s2_k96_tokenonly_xattn_e25_bf16_bs192_trainonly_tokenizers
+  batch_size: 192
+  grad_accum_steps: 1
+  epochs: 25
+  lr: 5.0e-5
+  min_lr: 1.0e-7
+  weight_decay: 0.01
+  grad_norm: 1.0
+  num_workers: 8
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  freeze_mmwave_tokenizer: true
+  freeze_vqvae: true
+  frozen_feature_cache:
+    enabled: false
+  latent_loss_weight: 0.3
+  token_loss_weight: 0.0
+  pose_loss_weight: 1.0
+  label_smoothing: 0.0
+  normalize_latent: false
+  log_interval: 20
+  seed: 42
+  amp: true
+  precision: bf16
+  tf32: true
+  matmul_precision: high
+  compile:
+    enabled: false
+  train_val_split:
+    enabled: false
+    val_split: val

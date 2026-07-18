@@ -1,0 +1,70 @@
+# MMBody direct PointTransformer with dataset-level root-normalized input and target.
+
+random_seed: 42
+
+dataset:
+  name: mmbody
+
+dataset_path: dataset://mmbody
+coord_transform: null
+
+point_transformer:
+  data_format:
+    radar_input_c: 5
+    num_joints: 22
+  model:
+    scale: base
+    dropout: 0.1
+    nneighbor: 16
+
+data_format:
+  n_points: 200
+  merge_nframes: 3
+  normalized: true
+  input_root_normalized: true
+  target_root_normalized: true
+  point_sampling: fps
+  radar_input_c: 5
+  num_joints: 22
+
+training:
+  stage: hpe_point_transformer
+  stage_display_name: HPE PointTransformer
+  metric_namespace: hpe_point_transformer
+  run_name: mmbody_hpe_pt_rootnorm_e25_bf16_bs256
+  batch_size: 256
+  grad_accum_steps: 1
+  epochs: 25
+  lr: 3.0e-4
+  min_lr: 1.0e-6
+  scheduler: cosine
+  warmup_epochs: 5
+  weight_decay: 1.0e-4
+  grad_norm: 1.0
+  num_workers: 8
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  amp: true
+  precision: bf16
+  tf32: true
+  matmul_precision: high
+  compile:
+    enabled: false
+  log_interval: 20
+  val_freq: 1
+  seed: 42
+  train_val_split:
+    enabled: true
+    protocol: heldout_train_sequences
+    val_ratio: 0.15
+    split_seed: 42
+
+evaluation:
+  mpjpe_only: true
+  m4human_action_groups: false
+  primary_metric: mpjpe
+  root_index: 0
+
+pretrained:
+  point_transformer: null

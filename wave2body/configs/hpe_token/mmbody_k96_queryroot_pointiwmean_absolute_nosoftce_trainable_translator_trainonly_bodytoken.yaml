@@ -1,0 +1,21 @@
+# MMBody Stage 2 practical absolute route with a train-only MMBody body tokenizer.
+
+base_config: bases/mmbody_k96_queryroot_absolute_nosoftce.yaml
+
+training:
+  run_name: mmbody_hpe_token_k96_queryroot_pointiwmean_absolute_mmbody_trainonly_bodytoken_nosoftce_trainable_translator_e25_bf16_bs256_rootcrop
+  frozen_feature_cache:
+    enabled: true
+    reuse: true
+    batch_size: 512
+    num_workers: 0
+    pin_memory: true
+    prefetch_factor: 2
+    path: artifact://cache/mmbody_hpe_token_features_noinput_rootnorm_nosoftce_mmbody_trainonly_bodytoken_abs
+    device: auto
+    max_gpu_cache_fraction: 0.60
+    batch_loader: direct
+
+pretrained:
+  vqvae: workspace://vqvae/checkpoints/stage_b_part_k96_mmbody_trainonly_from_amass_mmbody_train/best_model.pth
+  hpe_token: artifact://experiments/hpe_token/results/mmbody_hpe_token_k96_tokenonly_xattn_fulltrain_mmbody_trainonly_bodytoken_softdec_t1p25_noinput_rootnorm_nosoftce_e25_bf16_bs256/checkpoints/best.pth

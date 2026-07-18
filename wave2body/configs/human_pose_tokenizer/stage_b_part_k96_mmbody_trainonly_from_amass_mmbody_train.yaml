@@ -1,0 +1,31 @@
+# MMBody train-only finetune for the K96 body-part VQ-VAE.
+#
+# Initialize from stage_a_part_k96_amass_mmbody_train_joints with
+# --resume-model-only. The data pool intentionally excludes MMBody test.
+
+base_config: stage_a_part_k96_amass_mmbody_m4human.yaml
+
+data:
+  train_ratio: 0.9
+  dataset_device: cpu
+  batch_loader: tensor
+  use_cache: true
+  cache_build_workers: 8
+  cache_build_chunk_size: 4096
+  cache_dir: workspace://vqvae/cache/joint_cache_mmbody_trainonly_joints_k96
+  dataset_configs:
+    - name: MMBody_train
+      type: mmbody
+      path: dataset://mmbody
+      params:
+        splits: [train]
+        normalized: true
+        cache_build_workers: 8
+        cache_build_chunk_size: 4096
+
+training:
+  epochs: 10
+  batch_size: 2048
+  scheduler:
+    T_max: 10
+    eta_min: 1.0e-5

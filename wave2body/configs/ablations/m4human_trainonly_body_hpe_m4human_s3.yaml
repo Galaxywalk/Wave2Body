@@ -1,0 +1,9 @@
+# M4Human s3 HPE-token ablation with M4Human s3/train-only body tokenizer.
+
+base_config: ../hpe_token/m4human_s3_k96_xattn_trainonly_tokenizers.yaml
+
+training:
+  run_name: m4human_s3_k96_m4human_trainonly_bodytoken_xattn_e25_bf16_bs192_trainonly_tokenizers
+
+pretrained:
+  vqvae: workspace://vqvae/checkpoints/stage_a_part_k96_m4human_s3_trainonly_param_joints/best_model.pth

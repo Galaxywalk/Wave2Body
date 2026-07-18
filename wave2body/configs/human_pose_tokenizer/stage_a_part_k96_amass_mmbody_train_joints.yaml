@@ -1,0 +1,57 @@
+# AMASS + MMBody train-only K96 body-part VQ-VAE.
+#
+# This is the no-MMBody-test-leak Stage A route for the MMBody body tokenizer.
+
+base_config: stage_a_part_k96_amass_mmbody_m4human.yaml
+
+data:
+  train_ratio: 0.9
+  dataset_device: cpu
+  batch_loader: tensor
+  use_cache: true
+  cache_build_workers: 8
+  cache_build_chunk_size: 4096
+  cache_dir: workspace://vqvae/cache/joint_cache_amass_mmbody_train_joints_k96
+  dataset_configs:
+    - name: AMASS_KIT
+      type: amass
+      path: dataset://amass_preproc/KIT
+    - name: AMASS_BMLmovi
+      type: amass
+      path: dataset://amass_preproc/BMLmovi
+    - name: AMASS_BMLrub
+      type: amass
+      path: dataset://amass_preproc/BMLrub
+    - name: AMASS_CMU
+      type: amass
+      path: dataset://amass_preproc/CMU
+    - name: AMASS_MOYO
+      type: amass
+      path: dataset://amass_preproc/MOYO
+    - name: AMASS_GRAB
+      type: amass
+      path: dataset://amass_preproc/GRAB
+    - name: AMASS_MoSh
+      type: amass
+      path: dataset://amass_preproc/MoSh
+    - name: AMASS_PosePrior
+      type: amass
+      path: dataset://amass_preproc/PosePrior
+    - name: AMASS_WEIZMANN
+      type: amass
+      path: dataset://amass_preproc/WEIZMANN
+    - name: MMBody_train
+      type: mmbody
+      path: dataset://mmbody
+      params:
+        splits: [train]
+        normalized: true
+        cache_build_workers: 8
+        cache_build_chunk_size: 4096
+
+training:
+  epochs: 30
+  batch_size: 16384
+  scheduler:
+    T_max: 30
+    eta_min: 1.0e-5

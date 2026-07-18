@@ -1,0 +1,9 @@
+# M4Human s3 no-body-token ablation with split-matched train-only mmWave tokenizer.
+
+base_config: no_body_token_relative_root_m4human_s3.yaml
+
+training:
+  run_name: m4human_s3_k96_no_body_token_pooled_mlp_relative_queryroot_absolute_e25_bf16_bs1024_trainonly_tokenizers
+
+pretrained:
+  mmwave_tokenizer: artifact://experiments/mmwave_tokenizer/results/m4human_s3_trainonly_mae_spatial_k96_bf16_bs512_w16_pf4/checkpoints/best.pt

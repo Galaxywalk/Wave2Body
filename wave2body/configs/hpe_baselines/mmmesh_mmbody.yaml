@@ -1,0 +1,87 @@
+# mmMesh baseline model port for MMBody-style radar point clouds.
+#
+# Trains absolute 22-joint MPJPE through the local SMPL-X decoder. Input points
+# are root-cropped as a human ROI, but input and target coordinates stay in the
+# raw radar frame.
+
+baseline:
+  name: mmmesh
+
+dataset:
+  name: mmbody
+dataset_path: dataset://mmbody
+
+data_format:
+  merge_nframes: 64
+  radar_input_c: 5
+  n_points: 128
+  num_joints: 22
+  normalized: false
+  input_root_normalized: false
+  input_root_crop: true
+  input_root_crop_x_range: [-1.0, 1.0]
+  input_root_crop_y_range: [-1.0, 1.0]
+  input_root_crop_z_range: [-1.0, 1.0]
+  target_root_normalized: false
+  return_mmmesh_targets: false
+  return_mmmesh_vertices: false
+
+data:
+  cache:
+    mode: cpu_tensor
+    path: artifact://cache/mmbody_mmmesh_j22_rootcrop_tensors
+    build_workers: 16
+    build_batch_size: 512
+    build_prefetch_factor: 4
+
+mmmesh:
+  input_dim: 5
+  keep_raw_dims: 4
+  point_feature_dim: 24
+  anchor_nsample: 8
+  decode_translation_mode: root_xy_plus_translation_z
+  body_decoder_config:
+    enabled: true
+    model_path: dataset://m4human/models
+    model_type: smplx
+    joint_count: 22
+    return_vertices: false
+
+mmmesh_loss:
+  rotmat_weight: 0.0
+  translation_weight: 0.0
+  root_xy_weight: 0.1
+  betas_weight: 0.0
+  gender_weight: 0.0
+  joints_weight: 1.0
+  vertices_weight: 0.0
+  gender_loss: hinge
+
+training:
+  stage: hpe_mmmesh
+  run_name: mmbody_mmmesh_absmpjpe_j22_rootcrop_smplx_cache_e25_bf16_bs256
+  batch_size: 256
+  epochs: 25
+  lr: 0.001
+  optimizer: adam
+  num_workers: 8
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  amp: true
+  precision: bf16
+  tf32: true
+  matmul_precision: high
+  compile:
+    enabled: false
+  log_interval: 20
+  seed: 42
+  train_val_split:
+    enabled: true
+    protocol: heldout_train_sequences
+    val_ratio: 0.15
+    split_seed: 42
+
+evaluation:
+  primary_metric: mpjpe_mm
+  diagnostic_metrics: [mpjpe_mm, total_loss, joints_loss, root_xy_loss]

@@ -1,0 +1,26 @@
+datasets:
+  - name: MMBody_test
+    type: mmbody
+    path: dataset://mmbody
+    params:
+      splits: [test]
+  - name: M4Human_s3_test
+    type: m4human
+    path: dataset://m4human
+    params:
+      split_id: s3
+      subset: test
+      smplx_model_root: dataset://m4human/models
+      temporal_window: 4
+      pose_source: smplx
+      lmdb_readahead: true
+      normalize_z: true
+      normalized: true
+
+evaluation:
+  batch_size: 8192
+  num_workers: 0
+  cache_build_workers: 8
+  cache_build_chunk_size: 4096
+  compute_p_mpjpe: true
+  cache_dir: workspace://vqvae/cache/joint_cache_eval_mmbody_m4human

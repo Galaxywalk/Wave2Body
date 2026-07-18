@@ -1,0 +1,43 @@
+# MMBody K96 Stage 2 practical absolute HPE-token base.
+
+base_config: mmbody_k96_stage1_noinput_rootnorm_nosoftce.yaml
+
+root_head:
+  architecture: query_attn
+  attention_hidden_dim: 256
+  attention_heads: 4
+  num_query_tokens: 4
+  hidden_dim: 256
+  num_layers: 3
+  dropout: 0.1
+  use_centers: true
+  point_stats_dim: 19
+  prior_mode: point_intensity_weighted_mean
+  residual_scale: 1.0
+
+training:
+  stage: absolute_root_head
+  stage_display_name: Absolute Root Head
+  metric_namespace: absolute_root_head
+  run_name: mmbody_hpe_token_k96_queryroot_pointiwmean_absolute_mmbody_trainonly_bodytoken_nosoftce_trainable_translator_e25_bf16_bs256_rootcrop
+  lr: 5.0e-5
+  min_lr: 1.0e-7
+  freeze_mmwave_tokenizer: true
+  freeze_token_translator: false
+  freeze_vqvae: true
+  translator_lr_mult: 1.0
+  root_head_lr_mult: 6.0
+  root_loss_weight: 1.0
+  absolute_pose_loss_weight: 0.25
+  pose_loss_weight: 1.0
+  soft_token_ce:
+    enabled: false
+
+evaluation:
+  primary_metric: absolute_mpjpe
+  diagnostic_metrics: [absolute_mpjpe, root_error, root_aligned_mpjpe]
+  root_index: 0
+  m4human_action_groups: false
+
+pretrained:
+  hpe_token: artifact://experiments/hpe_token/results/mmbody_hpe_token_k96_tokenonly_xattn_fulltrain_mmbody_trainonly_bodytoken_softdec_t1p25_noinput_rootnorm_nosoftce_e25_bf16_bs256/checkpoints/best.pth

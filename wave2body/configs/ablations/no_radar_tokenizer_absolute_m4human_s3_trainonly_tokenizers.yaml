@@ -1,0 +1,11 @@
+# M4Human s3 no-radar-tokenizer absolute-stage ablation with no-leak body tokenizer.
+
+base_config: no_radar_tokenizer_absolute_m4human_s3.yaml
+
+training:
+  run_name: m4human_s3_k96_no_radar_tokenizer_queryroot_absolute_e25_bf16_bs1024_trainonly_tokenizers
+
+pretrained:
+  vqvae: workspace://vqvae/checkpoints/stage_a_part_k96_amass_m4human_s3_trainonly_param_joints/best_model.pth
+  hpe_token: artifact://experiments/ablation_components_current/results/m4human_s3_k96_no_radar_tokenizer_rawpointnet_xattn_e25_bf16_bs1024_trainonly_tokenizers/checkpoints/best.pth
+  mmwave_tokenizer: null

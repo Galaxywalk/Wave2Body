@@ -1,0 +1,7 @@
+base_config: m4human_s2_mae_spatial_k96_fast.yaml
+
+m4human:
+  split: s3
+
+training:
+  run_name: m4human_s3_mae_spatial_k96_bf16_bs512_w16_pf4

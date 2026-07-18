@@ -1,0 +1,82 @@
+# mmDiff port on M4Human hist4, split s2.
+
+random_seed: 43
+
+baseline:
+  name: mmdiff
+
+dataset:
+  name: m4human
+dataset_path: dataset://m4human
+coord_transform: m4human_radar_absolute_z_shifted_no_root_normalization
+
+m4human:
+  cached_root: dataset://m4human
+  smplx_model_root: dataset://m4human/models
+  split: s2
+  frame_mode: hist4
+  temporal_offsets: [-3, -2, -1, 0]
+  temporal_window: 4
+  normalize_z: true
+  pose_source: param_joints
+  random_sample_train: true
+  intensity_scale: 1.0
+  max_samples:
+    train: null
+    val: null
+    test: null
+
+data_format:
+  n_points: 256
+  merge_nframes: 4
+  normalized: false
+  input_root_normalized: false
+  input_root_crop: false
+  target_root_normalized: false
+  radar_input_c: 4
+  num_joints: 22
+
+mmdiff:
+  num_joints: 22
+  radar_input_dim: 4
+  condition_dim: 64
+  hidden_dim: 96
+  history_frames: 6
+  num_layers: 5
+  num_heads: 4
+  dropout: 0.25
+  local_points: 50
+
+mmdiff_loss:
+  pose_weight: 1.0
+  coarse_weight: 0.0
+  history_weight: 0.0
+  limb_weight: 0.0
+  reduction: mse
+
+training:
+  stage: hpe_mmdiff
+  run_name: m4human_mmdiff_s2_hist4_pts256_e25_bf16_bs128
+  batch_size: 128
+  epochs: 25
+  lr: 0.00002
+  optimizer: adam
+  num_workers: 8
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  amp: true
+  precision: bf16
+  tf32: true
+  matmul_precision: high
+  compile:
+    enabled: false
+  log_interval: 20
+  seed: 43
+  train_val_split:
+    enabled: false
+    val_split: val
+
+evaluation:
+  primary_metric: mpjpe
+  diagnostic_metrics: [mpjpe, p_mpjpe]

@@ -1,0 +1,23 @@
+# M4Human S2 HPE ablation that replaces the pretrained patch tokenizer with a
+# trainable raw-point PointNet encoder while preserving the body-token route.
+
+base_config: ../hpe_token/m4human_s2_k96_xattn.yaml
+
+mmwave_tokenizer:
+  method: raw_point_pointnet
+  point_hidden_dim: 128
+  num_point_layers: 3
+  num_token_layers: 2
+
+training:
+  stage_display_name: HPE Token Ablation
+  run_name: m4human_s2_k96_no_radar_tokenizer_rawpointnet_xattn_e25_bf16_bs1024
+  batch_size: 1024
+  num_workers: 16
+  prefetch_factor: 4
+  freeze_mmwave_tokenizer: false
+  mmwave_tokenizer_lr_mult: 1.0
+
+pretrained:
+  mmwave_tokenizer: null
+  vqvae: null

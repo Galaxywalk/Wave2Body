@@ -1,0 +1,47 @@
+# M4Human s2 no-body-token ablation.
+#
+# Frozen K96 mmWave patch tokenizer plus pooled MLP direct absolute-pose
+# regression. This removes the body-token translator and body VQ-VAE.
+
+base_config: ../hpe_token/bases/m4human_k96_stage1.yaml
+
+coord_transform: m4human_radar_absolute_z_shifted_no_body_token_pooled_mlp
+
+data_format:
+  normalized: false
+  input_root_normalized: false
+  input_root_crop: false
+  target_root_normalized: false
+
+sensor_tokens:
+  mode: token_center_concat
+  center_scale: 1.0
+  zero_invalid: true
+
+direct_regressor:
+  architecture: pooled_mlp
+  hidden_dim: 512
+  num_layers: 4
+  dropout: 0.1
+  use_centers: true
+  point_stats_dim: 19
+
+training:
+  stage: ablation_no_body_token
+  run_name: m4human_s2_k96_no_body_token_pooled_mlp_absolute_e25_bf16_bs1024
+  batch_size: 1024
+  epochs: 25
+  lr: 5.0e-5
+  min_lr: 1.0e-7
+  num_workers: 16
+  prefetch_factor: 4
+  freeze_mmwave_tokenizer: true
+  root_loss_weight: 0.0
+  absolute_pose_loss_weight: 1.0
+
+evaluation:
+  primary_metric: absolute_mpjpe
+  diagnostic_metrics: [absolute_mpjpe, root_error, root_aligned_mpjpe, p_mpjpe]
+  compute_p_mpjpe: true
+  root_index: 0
+  m4human_action_groups: true

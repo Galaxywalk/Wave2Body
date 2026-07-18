@@ -1,0 +1,14 @@
+# M4Human s3 Stage 2 absolute root-head route with split-matched train-only tokenizers.
+
+base_config: bases/m4human_k96_queryroot_absolute.yaml
+
+m4human:
+  split: s3
+
+training:
+  run_name: m4human_hpe_token_p1_s3_k96_tokenonly_queryattn_pointiwmean_absolute_trainable_e25_bf16_bs1024_trainonly_tokenizers
+
+pretrained:
+  mmwave_tokenizer: artifact://experiments/mmwave_tokenizer/results/m4human_s3_trainonly_mae_spatial_k96_bf16_bs512_w16_pf4/checkpoints/best.pt
+  vqvae: workspace://vqvae/checkpoints/stage_a_part_k96_amass_m4human_s3_trainonly_param_joints/best_model.pth
+  hpe_token: artifact://experiments/hpe_token/results/m4human_hpe_token_p1_s3_k96_tokenonly_xattn_e25_bf16_bs192_trainonly_tokenizers/checkpoints/best.pth

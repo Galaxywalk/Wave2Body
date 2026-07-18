@@ -1,0 +1,9 @@
+# M4Human s3 HPE-token ablation with AMASS-only body tokenizer and no-leak mmWave tokenizer.
+
+base_config: ../hpe_token/m4human_s3_k96_xattn_trainonly_tokenizers.yaml
+
+training:
+  run_name: m4human_s3_k96_amass_only_bodytoken_xattn_e25_bf16_bs192_trainonly_tokenizers
+
+pretrained:
+  vqvae: workspace://vqvae/checkpoints/amass_only_body_tokenizer_k96_e30_bf16_bs16384/best_model.pth

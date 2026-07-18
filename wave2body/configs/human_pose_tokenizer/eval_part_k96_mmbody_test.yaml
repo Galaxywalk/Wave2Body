@@ -1,0 +1,15 @@
+datasets:
+  - name: MMBody_test
+    type: mmbody
+    path: dataset://mmbody
+    params:
+      splits: [test]
+      normalized: true
+
+evaluation:
+  batch_size: 8192
+  num_workers: 0
+  cache_build_workers: 8
+  cache_build_chunk_size: 4096
+  compute_p_mpjpe: true
+  cache_dir: workspace://vqvae/cache/joint_cache_eval_mmbody_test
