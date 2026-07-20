@@ -63,11 +63,14 @@ uv run python scripts/datasets/validate_mmbody_compact.py --help
 
 ## Pretrained weights
 
-Google Drive: [download]()
+Google Drive: [download the Wave2Body release bundle](https://drive.google.com/drive/folders/1NI9k3TRUbfI9hZjrcJvyKnCfaNIVOYBT)
 
-The link is intentionally empty for the initial repository upload and will be
-filled with the public checkpoint bundle. Preserve the bundle directory layout
-when extracting it:
+Download `wave2body_workspace_artifacts_20260718.tar.zst` for the pretrained
+checkpoints, accepted evaluation outputs, and logs. The other archives in the
+folder contain license-dependent runtime datasets and an optional AMASS
+aggregate; they are not required merely to inspect the released weights.
+Google Drive access follows the folder's sharing permissions. Preserve the
+bundle directory layout when extracting it:
 
 ```text
 wave2body_workspace/
