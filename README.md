@@ -63,6 +63,12 @@ uv run python scripts/datasets/validate_mmbody_compact.py --help
 
 ## Pretrained weights
 
+The patch encoder now applies its local/global fusion MLP to each point before
+the final max pooling (issue #3). This changes the forward computation while
+preserving parameter names and shapes, so previously trained weights require
+retraining for the corrected architecture. To reproduce the published results
+with the original checkpoint bundle, use release revision `35469ea`.
+
 Google Drive: [download the Wave2Body release bundle](https://drive.google.com/drive/folders/1NI9k3TRUbfI9hZjrcJvyKnCfaNIVOYBT)
 
 Download `wave2body_workspace_artifacts_20260718.tar.zst` for the pretrained
