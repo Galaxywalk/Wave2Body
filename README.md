@@ -66,8 +66,11 @@ uv run python scripts/datasets/validate_mmbody_compact.py --help
 The patch encoder now applies its local/global fusion MLP to each point before
 the final max pooling (issue #3). This changes the forward computation while
 preserving parameter names and shapes, so previously trained weights require
-retraining for the corrected architecture. To reproduce the published results
-with the original checkpoint bundle, use release revision `35469ea`.
+retraining of the radar tokenizer and downstream HPE stages for the corrected
+architecture. The body tokenizer is unaffected. To reproduce the published
+results with the original checkpoint bundle, use release revision `35469ea`.
+The corrected S2 experiment is documented [below](#point-patch-encoder-correction-issue-3);
+its new weights are not included in the original download bundle.
 
 Google Drive: [download the Wave2Body release bundle](https://drive.google.com/drive/folders/1NI9k3TRUbfI9hZjrcJvyKnCfaNIVOYBT)
 
@@ -96,6 +99,66 @@ export WAVE2BODY_ARTIFACT_ROOT="$WAVE2BODY_WORKSPACE_ROOT/wave2body_artifacts"
 Every CLI accepts explicit checkpoint overrides, so the archive layout is
 convenient rather than mandatory.
 
+## Point-patch encoder correction (issue #3)
+
+[Issue #3](https://github.com/Galaxywalk/Wave2Body/issues/3) identified an
+implementation bug. Our patch encoder was based primarily on the
+[Point-MAE encoder](https://github.com/Pang-Yatian/Point-MAE/blob/main/models/Point_MAE.py),
+but we incorrectly placed the fusion MLP after the final max pooling. With
+`m = max_i(x_i)`, pooling the concatenated features first reduces them to
+`[m, m]` and loses the intended point-wise local/global interaction.
+
+The corrected order is **point-wise MLP → concatenate the broadcast patch-global
+feature → point-wise fusion MLP → max pooling**. The existing fusion MLP,
+including its LayerNorm, now operates on each point before pooling. Regression
+tests cover patches with identical channel maxima but different point-wise
+features, gradients, and permutation invariance.
+
+### Completed S2, seed-42 rerun
+
+We retrained the radar tokenizer for 80 epochs (batch 512), Stage I for 25
+epochs (batch 192), and Stage II for 25 epochs (batch 1024) on one A100 GPU
+using bf16. Both downstream stages use the newly trained radar tokenizer and
+the unchanged body tokenizer; both tokenizers remain frozen. Stage II starts
+from the new Stage-I checkpoint and trains the translator and localization
+head. Checkpoints were selected on validation data: radar epoch 80, Stage-I
+epoch 25, and Stage-II epoch 20 (epochs are one-based).
+
+The comparison uses the historical S2 seed-42 run with the same training
+recipe. Validation contains 33,987 samples; the final test contains all 133,211
+samples and is evaluated after validation-based checkpoint selection. All
+pose errors below are in mm; lower is better. Change means corrected minus
+original.
+
+| Stage / split / metric | Original | Corrected | Change |
+| --- | ---: | ---: | ---: |
+| Stage I / validation / relative MPJPE | 64.971 | 64.955 | -0.015 |
+| Stage II / validation / absolute MPJPE | 83.433 | 84.154 | +0.720 |
+| Stage II / test / absolute MPJPE | 102.671 | 102.900 | +0.229 |
+| Stage II / test / root error | 75.769 | 76.176 | +0.407 |
+| Stage II / test / root-aligned MPJPE | 75.070 | 74.899 | -0.171 |
+| Stage II / test / PA-MPJPE | 55.894 | 55.831 | -0.063 |
+
+The radar reconstruction validation loss decreased from 0.071804 to 0.070590
+(1.69%) when comparing the released original and corrected checkpoints on
+identical batches and masks, averaged over mask seeds 42/43/44. Geometric loss
+decreased from 0.060628 to 0.059343; feature loss increased from 0.111770 to
+0.112467. These are three evaluation masks for a single trained model, not
+three training seeds.
+
+The downstream changes are small and mixed: absolute position errors increase
+slightly while root-aligned and PA errors decrease slightly. This rerun does
+not establish an overall accuracy improvement or statistical significance.
+It is a single-seed comparison against a historical run, not a fresh paired
+multi-seed study. Corrected S3, mmBody, ablation, alignment, and efficiency
+results have not been measured. In particular, applying fusion to every point
+changes compute and activation memory despite preserving the parameter count.
+
+[Full-precision results and provenance](reports/point_patch_fusion_s2_seed42.json)
+record the training revision, checkpoint hashes, selection epochs, and metrics.
+The original paper tables below remain historical results for revision
+`35469ea`; this single-seed rerun does not replace their three-seed statistics.
+
 ## Quick checks
 
 ```bash
@@ -107,6 +170,11 @@ uv run python scripts/hpe_baselines/train.py --config mmdiff_m4human_s2 --dry-ru
 ```
 
 ## Reproducing the paper
+
+The paper results, ablations, token-alignment figures, and efficiency values
+in this section use the original encoder at revision `35469ea`. Check out that
+revision when evaluating the original release checkpoints. The corrected
+encoder results are reported separately above.
 
 ### Evaluation protocol
 
@@ -214,14 +282,19 @@ uv run python scripts/human_pose_tokenizer/evaluate_training_val.py --help
 #### 3. Stage-I and Stage-II HPE
 
 For each split and seed, first train Stage I, then pass its best checkpoint to
-Stage II:
+Stage II. On the corrected implementation, explicitly pass the newly trained
+radar tokenizer to both stages; configuration defaults still identify the
+original release artifacts:
 
 ```bash
 uv run python scripts/hpe_token/train.py \
-  --config m4human_stage1_s2 --seed 42 --device cuda --gpus 0
+  --config m4human_stage1_s2 --seed 42 \
+  --mmwave-tokenizer-checkpoint /path/to/corrected_radar/checkpoints/best.pt \
+  --device cuda --gpus 0
 
 uv run python scripts/hpe_token/train.py \
   --config m4human_abs_s2 --seed 42 \
+  --mmwave-tokenizer-checkpoint /path/to/corrected_radar/checkpoints/best.pt \
   --hpe-token-checkpoint /path/to/stage1_seed42/best.pth \
   --device cuda --gpus 0
 ```
