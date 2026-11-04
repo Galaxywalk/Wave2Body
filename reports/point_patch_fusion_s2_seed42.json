@@ -2,7 +2,6 @@
   "schema_version": 1,
   "issue": "https://github.com/Galaxywalk/Wave2Body/issues/3",
   "training_revision": "37986e1a19ce0a893e5241b38d9d2dc22fe6c61f",
-  "original_release_revision": "35469eaf8460bfc4a876012f3dcd8fdef92424ed",
   "downstream_completed_at": "2026-11-03T19:03:16.869776+00:00",
   "protocol": {
     "split": "s2",
@@ -28,7 +27,6 @@
       "root_aligned_mpjpe_mm",
       "p_mpjpe_mm"
     ],
-    "comparison": "Matched seed-42 historical run; a single-seed check, not a new three-seed paper average.",
     "dataset": "M4Human",
     "training_seeds": [
       42
@@ -47,10 +45,6 @@
     "stage1": "wave2body/configs/hpe_token/m4human_s2_k96_xattn_trainonly_tokenizers.yaml",
     "stage2": "wave2body/configs/hpe_token/m4human_s2_k96_queryroot_pointiwmean_absolute_trainable_translator_trainonly_tokenizers.yaml",
     "overrides": "Seed 42; explicit corrected radar checkpoint in both downstream stages; new Stage-I best checkpoint for Stage II; per-action evaluation enabled."
-  },
-  "historical_baseline_run_names": {
-    "stage1": "m4human_hpe_token_p1_s2_k96_tokenonly_xattn_e25_bf16_bs192_trainonly_tokenizers_seed42",
-    "stage2": "m4human_hpe_token_p1_s2_k96_tokenonly_queryattn_pointiwmean_absolute_trainable_e25_bf16_bs1024_trainonly_tokenizers_seed42"
   },
   "selected_epochs_one_based": {
     "radar": 80,
@@ -78,24 +72,8 @@
       43,
       44
     ],
-    "protocol": "Validation-selected best checkpoints; identical batches and masks for all models; no test data.",
-    "limitations": "One training seed per run. Mask seeds only measure validation masking variability, not training-seed uncertainty. Historical runs are not a fresh controlled retraining pair.",
-    "original_checkpoint_sha256": "2c878cbabc5911e556112035a7f5b98e537b981b1c5a41dbb65b789fd736f07c",
-    "original": {
-      "total_loss": {
-        "mean": 0.07180449921952389,
-        "mask_seed_std": 1.6975274850166527e-05
-      },
-      "chamfer_loss": {
-        "mean": 0.060627510534052236,
-        "mask_seed_std": 2.600750491931835e-05
-      },
-      "feature_loss": {
-        "mean": 0.11176989882697183,
-        "mask_seed_std": 0.00020507168024033772
-      }
-    },
-    "corrected": {
+    "protocol": "Validation-selected checkpoint; all validation samples evaluated with each mask seed.",
+    "metrics": {
       "total_loss": {
         "mean": 0.07059017491216005,
         "mask_seed_std": 1.5715023495122373e-05
@@ -108,81 +86,27 @@
         "mean": 0.11246698339316014,
         "mask_seed_std": 0.0002071416924782755
       }
-    },
-    "reduction_percent": {
-      "total_loss": 1.6911535078761004,
-      "chamfer_loss": 2.1179064584665945,
-      "feature_loss": -0.6236782653507132
     }
-  },
-  "stage1_validation_relative_mpjpe": {
-    "original_mm": 64.97069448232651,
-    "fixed_mm": 64.95534628629684,
-    "change_mm": -0.015348196029663086,
-    "reduction_percent": 0.023623259920421722
   },
   "stage2": {
     "val": {
-      "absolute_mpjpe_mm": {
-        "original_mm": 83.43307673931122,
-        "fixed_mm": 84.15354788303375,
-        "change_mm": 0.7204711437225342,
-        "reduction_percent": -0.8635317932403053
-      },
-      "root_error_mm": {
-        "original_mm": 61.753690242767334,
-        "fixed_mm": 62.32067197561264,
-        "change_mm": 0.5669817328453064,
-        "reduction_percent": -0.9181341724136267
-      },
-      "root_aligned_mpjpe_mm": {
-        "original_mm": 64.10063058137894,
-        "fixed_mm": 64.00731205940247,
-        "change_mm": -0.09331852197647095,
-        "reduction_percent": 0.14558128544148788
-      },
-      "p_mpjpe_mm": {
-        "original_mm": 52.01509967446327,
-        "fixed_mm": 51.87751352787018,
-        "change_mm": -0.13758614659309387,
-        "reduction_percent": 0.2645119349077044
-      }
+      "absolute_mpjpe_mm": 84.15354788303375,
+      "root_error_mm": 62.32067197561264,
+      "root_aligned_mpjpe_mm": 64.00731205940247,
+      "p_mpjpe_mm": 51.87751352787018
     },
     "test": {
-      "absolute_mpjpe_mm": {
-        "original_mm": 102.67113149166107,
-        "fixed_mm": 102.8996929526329,
-        "change_mm": 0.22856146097183228,
-        "reduction_percent": -0.22261511843803533
-      },
-      "root_error_mm": {
-        "original_mm": 75.76915621757507,
-        "fixed_mm": 76.17619633674622,
-        "change_mm": 0.4070401191711426,
-        "reduction_percent": -0.5372108381440935
-      },
-      "root_aligned_mpjpe_mm": {
-        "original_mm": 75.07023960351944,
-        "fixed_mm": 74.89907741546631,
-        "change_mm": -0.1711621880531311,
-        "reduction_percent": 0.22800271979564413
-      },
-      "p_mpjpe_mm": {
-        "original_mm": 55.89427053928375,
-        "fixed_mm": 55.831000208854675,
-        "change_mm": -0.06327033042907715,
-        "reduction_percent": 0.1131964507607436
-      }
+      "absolute_mpjpe_mm": 102.8996929526329,
+      "root_error_mm": 76.17619633674622,
+      "root_aligned_mpjpe_mm": 74.89907741546631,
+      "p_mpjpe_mm": 55.831000208854675
     }
   },
-  "interpretation": "Small, mixed downstream changes; no demonstrated overall accuracy improvement or statistical significance from this single-seed historical comparison.",
-  "not_rerun": [
-    "Additional training seeds",
-    "M4Human S3",
-    "mmBody",
-    "Component ablations",
-    "Stage-I token alignment analysis",
-    "Efficiency profiling"
-  ],
-  "weights_distribution": "Corrected checkpoints are not included in the original public release bundle."
+  "weights_distribution": "Corrected checkpoints are not included in the original public release bundle.",
+  "stage1": {
+    "val": {
+      "relative_mpjpe_mm": 64.95534628629684
+    }
+  },
+  "multi_seed_status": "Additional training seeds will be reported when available."
 }

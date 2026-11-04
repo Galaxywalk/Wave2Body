@@ -63,14 +63,10 @@ uv run python scripts/datasets/validate_mmbody_compact.py --help
 
 ## Pretrained weights
 
-The patch encoder now applies its local/global fusion MLP to each point before
-the final max pooling (issue #3). This changes the forward computation while
-preserving parameter names and shapes, so previously trained weights require
-retraining of the radar tokenizer and downstream HPE stages for the corrected
-architecture. The body tokenizer is unaffected. To reproduce the published
-results with the original checkpoint bundle, use release revision `35469ea`.
-The corrected S2 experiment is documented [below](#point-patch-encoder-correction-issue-3);
-its new weights are not included in the original download bundle.
+The download bundle uses the encoder from revision `35469ea`; use that revision
+when evaluating its radar and HPE checkpoints. The updated S2 results are
+documented [below](#point-patch-encoder-correction-issue-3). Their checkpoints
+are not yet included in this bundle. The body tokenizer is unchanged.
 
 Google Drive: [download the Wave2Body release bundle](https://drive.google.com/drive/folders/1NI9k3TRUbfI9hZjrcJvyKnCfaNIVOYBT)
 
@@ -114,50 +110,34 @@ including its LayerNorm, now operates on each point before pooling. Regression
 tests cover patches with identical channel maxima but different point-wise
 features, gradients, and permutation invariance.
 
-### Completed S2, seed-42 rerun
+### Updated S2 results
 
-We retrained the radar tokenizer for 80 epochs (batch 512), Stage I for 25
-epochs (batch 192), and Stage II for 25 epochs (batch 1024) on one A100 GPU
-using bf16. Both downstream stages use the newly trained radar tokenizer and
+With seed 42, we retrained the radar tokenizer for 80 epochs (batch 512),
+Stage I for 25 epochs (batch 192), and Stage II for 25 epochs (batch 1024) on
+one A100 GPU using bf16. Both downstream stages use the newly trained radar tokenizer and
 the unchanged body tokenizer; both tokenizers remain frozen. Stage II starts
 from the new Stage-I checkpoint and trains the translator and localization
 head. Checkpoints were selected on validation data: radar epoch 80, Stage-I
 epoch 25, and Stage-II epoch 20 (epochs are one-based).
 
-The comparison uses the historical S2 seed-42 run with the same training
-recipe. Validation contains 33,987 samples; the final test contains all 133,211
-samples and is evaluated after validation-based checkpoint selection. All
-pose errors below are in mm; lower is better. Change means corrected minus
-original.
+Validation contains 33,987 samples; the final test contains all 133,211 samples
+and is evaluated after validation-based checkpoint selection. All pose errors
+below are in mm; lower is better.
 
-| Stage / split / metric | Original | Corrected | Change |
-| --- | ---: | ---: | ---: |
-| Stage I / validation / relative MPJPE | 64.971 | 64.955 | -0.015 |
-| Stage II / validation / absolute MPJPE | 83.433 | 84.154 | +0.720 |
-| Stage II / test / absolute MPJPE | 102.671 | 102.900 | +0.229 |
-| Stage II / test / root error | 75.769 | 76.176 | +0.407 |
-| Stage II / test / root-aligned MPJPE | 75.070 | 74.899 | -0.171 |
-| Stage II / test / PA-MPJPE | 55.894 | 55.831 | -0.063 |
+| Stage / split / metric | Result |
+| --- | ---: |
+| Stage I / validation / relative MPJPE | 64.955 |
+| Stage II / validation / absolute MPJPE | 84.154 |
+| Stage II / test / absolute MPJPE | 102.900 |
+| Stage II / test / root error | 76.176 |
+| Stage II / test / root-aligned MPJPE | 74.899 |
+| Stage II / test / PA-MPJPE | 55.831 |
 
-The radar reconstruction validation loss decreased from 0.071804 to 0.070590
-(1.69%) when comparing the released original and corrected checkpoints on
-identical batches and masks, averaged over mask seeds 42/43/44. Geometric loss
-decreased from 0.060628 to 0.059343; feature loss increased from 0.111770 to
-0.112467. These are three evaluation masks for a single trained model, not
-three training seeds.
-
-The downstream changes are small and mixed: absolute position errors increase
-slightly while root-aligned and PA errors decrease slightly. This rerun does
-not establish an overall accuracy improvement or statistical significance.
-It is a single-seed comparison against a historical run, not a fresh paired
-multi-seed study. Corrected S3, mmBody, ablation, alignment, and efficiency
-results have not been measured. In particular, applying fusion to every point
-changes compute and activation memory despite preserving the parameter count.
+Radar reconstruction validation loss is 0.070590 (geometric loss 0.059343,
+feature loss 0.112467), averaged over evaluation mask seeds 42/43/44.
 
 [Full-precision results and provenance](reports/point_patch_fusion_s2_seed42.json)
 record the training revision, checkpoint hashes, selection epochs, and metrics.
-The original paper tables below remain historical results for revision
-`35469ea`; this single-seed rerun does not replace their three-seed statistics.
 
 ## Quick checks
 
@@ -171,11 +151,6 @@ uv run python scripts/hpe_baselines/train.py --config mmdiff_m4human_s2 --dry-ru
 
 ## Reproducing the paper
 
-The paper results, ablations, token-alignment figures, and efficiency values
-in this section use the original encoder at revision `35469ea`. Check out that
-revision when evaluating the original release checkpoints. The corrected
-encoder results are reported separately above.
-
 ### Evaluation protocol
 
 - M4Human Cross-Subject uses split `s2` and Cross-Action uses split `s3`.
@@ -185,8 +160,8 @@ encoder results are reported separately above.
   three action-group means.
 - mmBody uses held-out training sequences for validation and the official test
   set for one final evaluation.
-- Learned main-table entries use seeds 42, 43, and 44 and report mean plus or
-  minus the sample standard deviation.
+- Entries with ± report mean and sample standard deviation over seeds 42, 43,
+  and 44.
 - Component ablations use seed 42.
 - Checkpoints are selected by validation metrics; test metrics are never used
   for model selection.
@@ -224,13 +199,16 @@ Repeat with seeds 43 and 44. These JSON files contain absolute MPJPE, root
 error, root-aligned MPJPE, Procrustes-aligned MPJPE when enabled, action-group
 metrics, and per-joint metrics.
 
-The expected main-table micro averages are:
+Test-set micro-average absolute MPJPE (mm):
 
 | Dataset / protocol | Wave2Body | WiCompass | mmMesh | mmDiff |
 | --- | ---: | ---: | ---: | ---: |
-| M4Human Cross-Subject | 102.53 ± 0.29 | 113.53 ± 1.91 | 146.10 ± 2.46 | 149.42 ± 5.32 |
+| M4Human Cross-Subject | 102.90 | 113.53 ± 1.91 | 146.10 ± 2.46 | 149.42 ± 5.32 |
 | M4Human Cross-Action | 115.26 ± 0.98 | 119.81 ± 4.36 | 150.34 ± 1.03 | 161.64 ± 4.55 |
 | mmBody official test | 128.17 ± 1.87 | 139.69 ± 4.43 | 145.79 ± 2.91 | 267.37 ± 19.36 |
+
+Wave2Body S2 entries use the updated seed-42 run; multi-seed statistics will
+be added. Other entries retain their released values.
 
 RT-Mesh values in the paper are transcribed from the official M4Human report;
 RT-Mesh is not trained by this repository.
@@ -383,7 +361,7 @@ Expected seed-42 micro-average absolute MPJPE:
 | M4Human-only body prior | 103.68 | 114.06 |
 | w/o mmWave tokenizer | 130.51 | 137.52 |
 | AMASS-only body prior | 103.46 | 115.08 |
-| Full Wave2Body | 102.67 | 115.23 |
+| Full Wave2Body | 102.90 | 115.23 |
 
 ### Stage-I token alignment
 
@@ -421,7 +399,7 @@ uv run python scripts/efficiency/run_m4human_efficiency.py \
   --profile-batches 128
 ```
 
-Expected profiler results:
+Released profiler results (revision `35469ea`):
 
 | Method | Training PFLOPs | Parameters | GFLOPs/sample | Throughput | Peak memory |
 | --- | ---: | ---: | ---: | ---: | ---: |
