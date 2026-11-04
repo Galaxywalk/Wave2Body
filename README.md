@@ -63,6 +63,11 @@ uv run python scripts/datasets/validate_mmbody_compact.py --help
 
 ## Pretrained weights
 
+The download bundle uses the encoder from revision `35469ea`; use that revision
+when evaluating its radar and HPE checkpoints. The updated S2 results are
+documented [below](#point-patch-encoder-correction-issue-3). Their checkpoints
+are not yet included in this bundle. The body tokenizer is unchanged.
+
 Google Drive: [download the Wave2Body release bundle](https://drive.google.com/drive/folders/1NI9k3TRUbfI9hZjrcJvyKnCfaNIVOYBT)
 
 Download `wave2body_workspace_artifacts_20260718.tar.zst` for the pretrained
@@ -90,6 +95,50 @@ export WAVE2BODY_ARTIFACT_ROOT="$WAVE2BODY_WORKSPACE_ROOT/wave2body_artifacts"
 Every CLI accepts explicit checkpoint overrides, so the archive layout is
 convenient rather than mandatory.
 
+## Point-patch encoder correction (issue #3)
+
+[Issue #3](https://github.com/Galaxywalk/Wave2Body/issues/3) identified an
+implementation bug. Our patch encoder was based primarily on the
+[Point-MAE encoder](https://github.com/Pang-Yatian/Point-MAE/blob/main/models/Point_MAE.py),
+but we incorrectly placed the fusion MLP after the final max pooling. With
+`m = max_i(x_i)`, pooling the concatenated features first reduces them to
+`[m, m]` and loses the intended point-wise local/global interaction.
+
+The corrected order is **point-wise MLP → concatenate the broadcast patch-global
+feature → point-wise fusion MLP → max pooling**. The existing fusion MLP,
+including its LayerNorm, now operates on each point before pooling. Regression
+tests cover patches with identical channel maxima but different point-wise
+features, gradients, and permutation invariance.
+
+### Updated S2 results
+
+With seed 42, we retrained the radar tokenizer for 80 epochs (batch 512),
+Stage I for 25 epochs (batch 192), and Stage II for 25 epochs (batch 1024) on
+one A100 GPU using bf16. Both downstream stages use the newly trained radar tokenizer and
+the unchanged body tokenizer; both tokenizers remain frozen. Stage II starts
+from the new Stage-I checkpoint and trains the translator and localization
+head. Checkpoints were selected on validation data: radar epoch 80, Stage-I
+epoch 25, and Stage-II epoch 20 (epochs are one-based).
+
+Validation contains 33,987 samples; the final test contains all 133,211 samples
+and is evaluated after validation-based checkpoint selection. All pose errors
+below are in mm; lower is better.
+
+| Stage / split / metric | Result |
+| --- | ---: |
+| Stage I / validation / relative MPJPE | 64.955 |
+| Stage II / validation / absolute MPJPE | 84.154 |
+| Stage II / test / absolute MPJPE | 102.900 |
+| Stage II / test / root error | 76.176 |
+| Stage II / test / root-aligned MPJPE | 74.899 |
+| Stage II / test / PA-MPJPE | 55.831 |
+
+Radar reconstruction validation loss is 0.070590 (geometric loss 0.059343,
+feature loss 0.112467), averaged over evaluation mask seeds 42/43/44.
+
+[Full-precision results and provenance](reports/point_patch_fusion_s2_seed42.json)
+record the training revision, checkpoint hashes, selection epochs, and metrics.
+
 ## Quick checks
 
 ```bash
@@ -111,8 +160,8 @@ uv run python scripts/hpe_baselines/train.py --config mmdiff_m4human_s2 --dry-ru
   three action-group means.
 - mmBody uses held-out training sequences for validation and the official test
   set for one final evaluation.
-- Learned main-table entries use seeds 42, 43, and 44 and report mean plus or
-  minus the sample standard deviation.
+- Entries with ± report mean and sample standard deviation over seeds 42, 43,
+  and 44.
 - Component ablations use seed 42.
 - Checkpoints are selected by validation metrics; test metrics are never used
   for model selection.
@@ -150,13 +199,16 @@ Repeat with seeds 43 and 44. These JSON files contain absolute MPJPE, root
 error, root-aligned MPJPE, Procrustes-aligned MPJPE when enabled, action-group
 metrics, and per-joint metrics.
 
-The expected main-table micro averages are:
+Test-set micro-average absolute MPJPE (mm):
 
 | Dataset / protocol | Wave2Body | WiCompass | mmMesh | mmDiff |
 | --- | ---: | ---: | ---: | ---: |
-| M4Human Cross-Subject | 102.53 ± 0.29 | 113.53 ± 1.91 | 146.10 ± 2.46 | 149.42 ± 5.32 |
+| M4Human Cross-Subject | 102.90 | 113.53 ± 1.91 | 146.10 ± 2.46 | 149.42 ± 5.32 |
 | M4Human Cross-Action | 115.26 ± 0.98 | 119.81 ± 4.36 | 150.34 ± 1.03 | 161.64 ± 4.55 |
 | mmBody official test | 128.17 ± 1.87 | 139.69 ± 4.43 | 145.79 ± 2.91 | 267.37 ± 19.36 |
+
+Wave2Body S2 entries use the updated seed-42 run; multi-seed statistics will
+be added. Other entries retain their released values.
 
 RT-Mesh values in the paper are transcribed from the official M4Human report;
 RT-Mesh is not trained by this repository.
@@ -208,14 +260,19 @@ uv run python scripts/human_pose_tokenizer/evaluate_training_val.py --help
 #### 3. Stage-I and Stage-II HPE
 
 For each split and seed, first train Stage I, then pass its best checkpoint to
-Stage II:
+Stage II. On the corrected implementation, explicitly pass the newly trained
+radar tokenizer to both stages; configuration defaults still identify the
+original release artifacts:
 
 ```bash
 uv run python scripts/hpe_token/train.py \
-  --config m4human_stage1_s2 --seed 42 --device cuda --gpus 0
+  --config m4human_stage1_s2 --seed 42 \
+  --mmwave-tokenizer-checkpoint /path/to/corrected_radar/checkpoints/best.pt \
+  --device cuda --gpus 0
 
 uv run python scripts/hpe_token/train.py \
   --config m4human_abs_s2 --seed 42 \
+  --mmwave-tokenizer-checkpoint /path/to/corrected_radar/checkpoints/best.pt \
   --hpe-token-checkpoint /path/to/stage1_seed42/best.pth \
   --device cuda --gpus 0
 ```
@@ -304,7 +361,7 @@ Expected seed-42 micro-average absolute MPJPE:
 | M4Human-only body prior | 103.68 | 114.06 |
 | w/o mmWave tokenizer | 130.51 | 137.52 |
 | AMASS-only body prior | 103.46 | 115.08 |
-| Full Wave2Body | 102.67 | 115.23 |
+| Full Wave2Body | 102.90 | 115.23 |
 
 ### Stage-I token alignment
 
@@ -342,7 +399,7 @@ uv run python scripts/efficiency/run_m4human_efficiency.py \
   --profile-batches 128
 ```
 
-Expected profiler results:
+Released profiler results (revision `35469ea`):
 
 | Method | Training PFLOPs | Parameters | GFLOPs/sample | Throughput | Peak memory |
 | --- | ---: | ---: | ---: | ---: | ---: |

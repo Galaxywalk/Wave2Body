@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "issue": "https://github.com/Galaxywalk/Wave2Body/issues/3",
+  "training_revision": "37986e1a19ce0a893e5241b38d9d2dc22fe6c61f",
+  "downstream_completed_at": "2026-11-03T19:03:16.869776+00:00",
+  "protocol": {
+    "split": "s2",
+    "seed": 42,
+    "stage1_epochs": 25,
+    "stage1_batch_size": 192,
+    "stage2_epochs": 25,
+    "stage2_batch_size": 1024,
+    "stage1_selection": "validation relative MPJPE",
+    "stage2_selection": "validation absolute MPJPE",
+    "frozen": [
+      "mmwave_tokenizer",
+      "body_tokenizer"
+    ],
+    "stage2_trainable": [
+      "token_translator",
+      "root_head"
+    ],
+    "test": "Full official test once after Stage II validation selection, executed by the training pipeline; per-action and action-group metrics enabled.",
+    "metrics": [
+      "absolute_mpjpe_mm",
+      "root_error_mm",
+      "root_aligned_mpjpe_mm",
+      "p_mpjpe_mm"
+    ],
+    "dataset": "M4Human",
+    "training_seeds": [
+      42
+    ],
+    "validation_samples": 33987,
+    "test_samples": 133211,
+    "precision": "bf16",
+    "hardware": "NVIDIA A100-PCIE-40GB",
+    "pose_source": "param_joints",
+    "radar_pretraining_epochs": 80,
+    "radar_pretraining_batch_size": 512,
+    "body_tokenizer": "Unchanged release body tokenizer: stage_a_part_k96_amass_m4human_s2_trainonly_param_joints"
+  },
+  "configurations": {
+    "radar": "m4human_s2_trainonly",
+    "stage1": "wave2body/configs/hpe_token/m4human_s2_k96_xattn_trainonly_tokenizers.yaml",
+    "stage2": "wave2body/configs/hpe_token/m4human_s2_k96_queryroot_pointiwmean_absolute_trainable_translator_trainonly_tokenizers.yaml",
+    "overrides": "Seed 42; explicit corrected radar checkpoint in both downstream stages; new Stage-I best checkpoint for Stage II; per-action evaluation enabled."
+  },
+  "selected_epochs_one_based": {
+    "radar": 80,
+    "stage1": 25,
+    "stage2": 20
+  },
+  "corrected_checkpoint_sha256": {
+    "radar": {
+      "sha256": "70eaa67034186c37781ce79324951abb80a7ab641a8b78d73c69b14b41b9c91d"
+    },
+    "body": {
+      "sha256": "c1e97df8d6204618d866cbffdd14c558424fbabb1a5f27a0ed099f8aec4684c9"
+    },
+    "stage1": {
+      "sha256": "ca2ed670d0e0f03f362caa803f123440c132a183c509f6ea693131313cea20b5"
+    },
+    "stage2": {
+      "sha256": "213a15c9b0ac0ec260443ec3659fae2567e762a242cd1a7014624ac68ea20eed"
+    }
+  },
+  "radar_validation": {
+    "samples": 33987,
+    "mask_seeds": [
+      42,
+      43,
+      44
+    ],
+    "protocol": "Validation-selected checkpoint; all validation samples evaluated with each mask seed.",
+    "metrics": {
+      "total_loss": {
+        "mean": 0.07059017491216005,
+        "mask_seed_std": 1.5715023495122373e-05
+      },
+      "chamfer_loss": {
+        "mean": 0.05934347657284403,
+        "mask_seed_std": 2.971024655629992e-05
+      },
+      "feature_loss": {
+        "mean": 0.11246698339316014,
+        "mask_seed_std": 0.0002071416924782755
+      }
+    }
+  },
+  "stage2": {
+    "val": {
+      "absolute_mpjpe_mm": 84.15354788303375,
+      "root_error_mm": 62.32067197561264,
+      "root_aligned_mpjpe_mm": 64.00731205940247,
+      "p_mpjpe_mm": 51.87751352787018
+    },
+    "test": {
+      "absolute_mpjpe_mm": 102.8996929526329,
+      "root_error_mm": 76.17619633674622,
+      "root_aligned_mpjpe_mm": 74.89907741546631,
+      "p_mpjpe_mm": 55.831000208854675
+    }
+  },
+  "weights_distribution": "Corrected checkpoints are not included in the original public release bundle.",
+  "stage1": {
+    "val": {
+      "relative_mpjpe_mm": 64.95534628629684
+    }
+  },
+  "multi_seed_status": "Additional training seeds will be reported when available."
+}

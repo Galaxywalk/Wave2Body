@@ -8,7 +8,7 @@ import torch.nn as nn
 
 
 class PointPatchEncoder(nn.Module):
-    """PointNet-style local patch encoder supporting radar feature channels."""
+    """Fuse point and patch features per point before the final max pooling."""
 
     def __init__(self, input_channels: int, latent_dim: int, hidden_dim: int = 128, dropout: float = 0.0) -> None:
         super().__init__()
@@ -38,7 +38,10 @@ class PointPatchEncoder(nn.Module):
         x = self.point_mlp(patches.reshape(bsz * groups, group_size, channels))
         pooled = torch.max(x, dim=1, keepdim=True).values
         x = torch.cat([x, pooled.expand_as(x)], dim=-1)
-        out = self.global_mlp(torch.max(x, dim=1).values)
+        # Pooling first would collapse the concatenation to [pooled, pooled].
+        # Linear/LayerNorm operate on the last axis, preserving the point axis.
+        x = self.global_mlp(x)
+        out = torch.max(x, dim=1).values
         return out.view(bsz, groups, self.latent_dim)
 
 
