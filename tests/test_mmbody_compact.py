@@ -80,3 +80,23 @@ def test_compact_mmbody_matches_raw_loader_and_deduplicates(tmp_path):
     compact_joints, label = joints_dataset[0]
     assert label == 0
     torch.testing.assert_close(compact_joints, torch.from_numpy(joints[:22].astype(np.float32)))
+
+
+def test_list_train_sequence_ids_supports_compact_mmbody(tmp_path):
+    from wave2body.dataset.radar_pose.splits import list_train_sequence_ids
+
+    raw_root = tmp_path / "raw"
+    compact_root = tmp_path / "compact"
+    radar = np.zeros((4, 6), dtype=np.float64)
+    joints = np.zeros((55, 3), dtype=np.float64)
+    for seq_idx in (0, 3, 7):
+        seq_dir = raw_root / "train" / f"sequence_{seq_idx}"
+        (seq_dir / "radar").mkdir(parents=True, exist_ok=True)
+        (seq_dir / "mesh").mkdir(parents=True, exist_ok=True)
+        np.save(seq_dir / "radar/frame_0.npy", radar)
+        np.savez(seq_dir / "mesh/frame_0.npz", joints=joints)
+
+    compact_mmbody_dataset(raw_root, compact_root)
+    assert not (compact_root / "train").exists()
+    assert list_train_sequence_ids(compact_root) == [0, 3, 7]
+    assert list_train_sequence_ids(raw_root) == [0, 3, 7]

@@ -12,6 +12,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from .mmbody_compact import MMBodyCompactStore, is_mmbody_compact
+
 
 def to_sequence_id(value) -> int:
     if isinstance(value, int):
@@ -23,7 +25,20 @@ def to_sequence_id(value) -> int:
 
 
 def list_train_sequence_ids(dataset_path: str | Path) -> list[int]:
-    train_dir = Path(dataset_path) / "train"
+    root = Path(dataset_path)
+    if is_mmbody_compact(root):
+        store = MMBodyCompactStore(root)
+        try:
+            seq_ids = sorted(
+                {int(record["sequence"]) for record in store.samples if record.get("split") == "train"}
+            )
+        finally:
+            store.close()
+        if not seq_ids:
+            raise RuntimeError(f"No training sequences found in compact mmBody root: {root}")
+        return seq_ids
+
+    train_dir = root / "train"
     if not train_dir.exists():
         raise FileNotFoundError(f"Train directory not found: {train_dir}")
     seq_ids = [

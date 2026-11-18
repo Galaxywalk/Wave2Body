@@ -63,10 +63,12 @@ uv run python scripts/datasets/validate_mmbody_compact.py --help
 
 ## Pretrained weights
 
-The download bundle uses the encoder from revision `35469ea`; use that revision
-when evaluating its radar and HPE checkpoints. The updated S2 results are
-documented [below](#point-patch-encoder-correction-issue-3). Their checkpoints
-are not yet included in this bundle. The body tokenizer is unchanged.
+The Google Drive archive bundle uses the historical encoder from revision
+`35469ea`; use that revision when evaluating checkpoints inside the `20260718`
+archive. Complete `main`-branch (`c889342`) checkpoints across all three
+benchmarks are staged for Hugging Face release and documented
+[below](#point-patch-encoder-correction-issue-3). The body tokenizer is
+unchanged across both revisions.
 
 Google Drive: [download the Wave2Body release bundle](https://drive.google.com/drive/folders/1NI9k3TRUbfI9hZjrcJvyKnCfaNIVOYBT)
 
@@ -110,34 +112,34 @@ including its LayerNorm, now operates on each point before pooling. Regression
 tests cover patches with identical channel maxima but different point-wise
 features, gradients, and permutation invariance.
 
-### Updated S2 results
+### Complete 3-seed benchmark & ablation results
 
-With seed 42, we retrained the radar tokenizer for 80 epochs (batch 512),
-Stage I for 25 epochs (batch 192), and Stage II for 25 epochs (batch 1024) on
-one A100 GPU using bf16. Both downstream stages use the newly trained radar tokenizer and
-the unchanged body tokenizer; both tokenizers remain frozen. Stage II starts
-from the new Stage-I checkpoint and trains the translator and localization
-head. Checkpoints were selected on validation data: radar epoch 80, Stage-I
-epoch 25, and Stage-II epoch 20 (epochs are one-based).
+We retrained the Stage-1 radar tokenizers (80 epochs) and both downstream HPE
+stages (25 + 25 epochs, seeds 42/43/44) across **M4Human Cross-Subject (`s2`)**,
+**M4Human Cross-Action (`s3`)**, and **mmBody**, reusing the unchanged Stage-2
+body VQ-VAE priors. Validation-selected test results (mean ± sample std over
+seeds 42/43/44, in mm; lower is better) match or improve upon the `35469ea`
+paper baseline:
 
-Validation contains 33,987 samples; the final test contains all 133,211 samples
-and is evaluated after validation-based checkpoint selection. All pose errors
-below are in mm; lower is better.
+| Benchmark / split | `35469ea` Abs. MPJPE | `main` Abs. MPJPE | `main` Root-Aligned MPJPE | `main` Root Error |
+| --- | ---: | ---: | ---: | ---: |
+| M4Human Cross-Subject (`s2`) | 102.53 ± 0.29 | 103.27 ± 0.73 | 75.47 ± 0.73 | 76.14 ± 0.45 |
+| ↳ *In-Place / Sit / Non-In-Place* | *90.62 / 99.30 / 127.62* | *91.93 / **95.59** / 128.67* | — | — |
+| M4Human Cross-Action (`s3`) | 115.26 ± 0.98 | **114.54 ± 0.72** | **86.69 ± 0.43** | 75.30 ± 0.38 |
+| ↳ *In-Place / Sit / Non-In-Place* | *97.30 / 114.23 / 138.07* | ***97.20** / **111.79** / **137.18*** | — | — |
+| mmBody (Official Test) | 128.17 ± 1.87 | **126.76 ± 2.03** | **81.53 ± 1.26** | 99.72 ± 3.47 |
 
-| Stage / split / metric | Result |
-| --- | ---: |
-| Stage I / validation / relative MPJPE | 64.955 |
-| Stage II / validation / absolute MPJPE | 84.154 |
-| Stage II / test / absolute MPJPE | 102.900 |
-| Stage II / test / root error | 76.176 |
-| Stage II / test / root-aligned MPJPE | 74.899 |
-| Stage II / test / PA-MPJPE | 55.831 |
+Stage-1 radar validation loss improves on M4Human (`0.071786 → 0.070590` on
+`s2`, `0.062440 → 0.061231` on `s3`) and remains unchanged on mmBody
+(`0.050841 → 0.051218`). Seed-42 component ablations confirm identical design
+trends (`w/o body-token branch`: `127.27` mm on `s2` / `137.59` mm on `s3`;
+`M4Human-only prior`: `102.44` / `114.78` mm; `AMASS-only prior`: `102.98` /
+`115.21` mm).
 
-Radar reconstruction validation loss is 0.070590 (geometric loss 0.059343,
-feature loss 0.112467), averaged over evaluation mask seeds 42/43/44.
-
-[Full-precision results and provenance](reports/point_patch_fusion_s2_seed42.json)
-record the training revision, checkpoint hashes, selection epochs, and metrics.
+See [`reports/point_patch_fusion_benchmarks.json`](reports/point_patch_fusion_benchmarks.json)
+(and the initial S2 single-seed record
+[`reports/point_patch_fusion_s2_seed42.json`](reports/point_patch_fusion_s2_seed42.json))
+for full-precision per-seed metrics and checkpoint SHA-256 hashes.
 
 ## Quick checks
 

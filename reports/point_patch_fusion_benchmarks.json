@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "issue": "https://github.com/Galaxywalk/Wave2Body/issues/3",
+  "pr": "https://github.com/Galaxywalk/Wave2Body/pull/4",
+  "code_revision": "c889342",
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "mmwave_tokenizer_val_loss": {
+    "m4human_s2": 0.07059076873602407,
+    "m4human_s3": 0.06123097463963062,
+    "mmbody": 0.05121837201452312
+  },
+  "benchmarks": {
+    "m4human_s2": {
+      "absolute_mpjpe_mm": {
+        "mean": 103.27464838822682,
+        "std": 0.7265638526161123,
+        "per_seed": [
+          102.8996929526329,
+          102.81216353178024,
+          104.11208868026733
+        ]
+      },
+      "root_error_mm": {
+        "mean": 76.71599338452022,
+        "std": 1.1957827916900574,
+        "per_seed": [
+          76.17619633674622,
+          75.88527351617813,
+          78.08651030063629
+        ]
+      },
+      "root_aligned_mpjpe_mm": {
+        "mean": 75.11897881825765,
+        "std": 0.28075015884358706,
+        "per_seed": [
+          74.89907741546631,
+          75.02264529466629,
+          75.43521374464035
+        ]
+      },
+      "p_mpjpe_mm": {
+        "mean": 55.86739629507065,
+        "std": 0.09006939027552582,
+        "per_seed": [
+          55.831000208854675,
+          55.80122023820877,
+          55.9699684381485
+        ]
+      },
+      "action_groups_abs_mpjpe_mm": {
+        "In-Place": {
+          "mean": 91.9287174432278,
+          "std": 0.41822438177681454,
+          "per_seed": [
+            91.90813627688217,
+            91.52116362329524,
+            92.35685242950599
+          ]
+        },
+        "Sit-In-Place": {
+          "mean": 95.59141038785495,
+          "std": 1.1209704105832858,
+          "per_seed": [
+            96.44736788749934,
+            96.0043104821626,
+            94.3225527939029
+          ]
+        },
+        "Non-In-Place": {
+          "mean": 128.6680063288668,
+          "std": 2.057261894433204,
+          "per_seed": [
+            127.17821419658978,
+            127.81049294226204,
+            131.0153118477486
+          ]
+        },
+        "Micro Average": {
+          "mean": 103.27466123717518,
+          "std": 0.7265684538758996,
+          "per_seed": [
+            102.89969729764901,
+            102.81217916854162,
+            104.11210724533491
+          ]
+        }
+      }
+    },
+    "m4human_s3": {
+      "absolute_mpjpe_mm": {
+        "mean": 114.53663557767868,
+        "std": 0.7248194958639568,
+        "per_seed": [
+          114.73134160041809,
+          115.14421552419662,
+          113.73434960842133
+        ]
+      },
+      "root_error_mm": {
+        "mean": 75.29887308677037,
+        "std": 0.3750876525913499,
+        "per_seed": [
+          75.15206187963486,
+          75.72516053915024,
+          75.01939684152603
+        ]
+      },
+      "root_aligned_mpjpe_mm": {
+        "mean": 86.68692161639531,
+        "std": 0.43118809312715284,
+        "per_seed": [
+          86.80063486099243,
+          87.04985678195953,
+          86.21027320623398
+        ]
+      },
+      "p_mpjpe_mm": {
+        "mean": 72.25812474886577,
+        "std": 0.2428927711442193,
+        "per_seed": [
+          72.27854430675507,
+          72.4901631474495,
+          72.00566679239273
+        ]
+      },
+      "action_groups_abs_mpjpe_mm": {
+        "In-Place": {
+          "mean": 97.20226766215555,
+          "std": 0.316801254567241,
+          "per_seed": [
+            97.31521890882098,
+            97.44711337361831,
+            96.84447070402737
+          ]
+        },
+        "Sit-In-Place": {
+          "mean": 111.7937366513518,
+          "std": 4.535761211171162,
+          "per_seed": [
+            111.49422945249675,
+            116.47182894649768,
+            107.41515155506093
+          ]
+        },
+        "Non-In-Place": {
+          "mean": 137.17963814655627,
+          "std": 0.456274188379051,
+          "per_seed": [
+            137.59955472252054,
+            137.2452496081908,
+            136.69411010895746
+          ]
+        },
+        "Micro Average": {
+          "mean": 114.53662058497973,
+          "std": 0.7248166082885216,
+          "per_seed": [
+            114.73132105126521,
+            115.14420149171666,
+            113.73433921195733
+          ]
+        }
+      }
+    },
+    "mmbody": {
+      "absolute_mpjpe_mm": {
+        "mean": 126.76176925500233,
+        "std": 2.0321856936103053,
+        "per_seed": [
+          126.8913745880127,
+          128.7260502576828,
+          124.66788291931152
+        ]
+      },
+      "root_error_mm": {
+        "mean": 99.71516827742259,
+        "std": 3.4684001869980308,
+        "per_seed": [
+          99.04781728982925,
+          103.46875339746475,
+          96.62893414497375
+        ]
+      },
+      "root_aligned_mpjpe_mm": {
+        "mean": 81.5302108724912,
+        "std": 1.2636395179708766,
+        "per_seed": [
+          82.12832361459732,
+          80.07855713367462,
+          82.38375186920166
+        ]
+      }
+    }
+  },
+  "component_ablations_seed42": {
+    "ablation_s2_001_no_body_token": {
+      "absolute_mpjpe_mm": 127.265065908432,
+      "root_error_mm": 75.85666328668594,
+      "root_aligned_mpjpe_mm": 103.23586314916611,
+      "p_mpjpe_mm": 80.99386096000671,
+      "action_groups_mm": {
+        "In-Place": 114.38754995017958,
+        "Sit-In-Place": 113.10902786116883,
+        "Non-In-Place": 157.85092587184448,
+        "Micro Average": 127.26511340484159
+      },
+      "checkpoint_sha256": "adab29437eba187864e6db97729b69502cd5db2012d47bde3831b0325af4f6bb"
+    },
+    "ablation_s2_002_m4human_only": {
+      "absolute_mpjpe_mm": 102.43834555149078,
+      "root_error_mm": 75.4595547914505,
+      "root_aligned_mpjpe_mm": 75.09203255176544,
+      "p_mpjpe_mm": 56.101761758327484,
+      "action_groups_mm": {
+        "In-Place": 90.46322494703382,
+        "Sit-In-Place": 94.87674556310873,
+        "Non-In-Place": 129.06206890167732,
+        "Micro Average": 102.43835189179164
+      },
+      "checkpoint_sha256": "b3aa029958dfaee26d336213e012e54c9de2032a69160a177789c82368c6cb28"
+    },
+    "ablation_s2_004_amass_only": {
+      "absolute_mpjpe_mm": 102.983757853508,
+      "root_error_mm": 75.41508227586746,
+      "root_aligned_mpjpe_mm": 75.81616193056107,
+      "p_mpjpe_mm": 56.479815393686295,
+      "action_groups_mm": {
+        "In-Place": 91.14510389942784,
+        "Sit-In-Place": 97.2356197318257,
+        "Non-In-Place": 128.74335946750364,
+        "Micro Average": 102.9837643624538
+      },
+      "checkpoint_sha256": "6a832e2498ea14a7474300d000a926245a7367071a52bb4af71fd658e8bccb2a"
+    },
+    "ablation_s3_001_no_body_token": {
+      "absolute_mpjpe_mm": 137.59459555149078,
+      "root_error_mm": 76.2813612818718,
+      "root_aligned_mpjpe_mm": 112.1605783700943,
+      "p_mpjpe_mm": 91.57814830541611,
+      "action_groups_mm": {
+        "In-Place": 117.71692177758409,
+        "Sit-In-Place": 131.6664143930581,
+        "Non-In-Place": 164.24460633682747,
+        "Micro Average": 137.59458522590245
+      },
+      "checkpoint_sha256": "3efa329505ab5815c267e6e663e48bf39d2d35d23d8dc0177032de99b450ec6e"
+    },
+    "ablation_s3_002_m4human_only": {
+      "absolute_mpjpe_mm": 114.7841066122055,
+      "root_error_mm": 75.67647099494934,
+      "root_aligned_mpjpe_mm": 86.12401783466339,
+      "p_mpjpe_mm": 72.0478966832161,
+      "action_groups_mm": {
+        "In-Place": 97.03229400151247,
+        "Sit-In-Place": 111.91259515937597,
+        "Non-In-Place": 137.9878317294066,
+        "Micro Average": 114.78410776724921
+      },
+      "checkpoint_sha256": "5770d87336870414445f3569aeecea84dcb2557b7d7a6b400dbed6b403341c1d"
+    },
+    "ablation_s3_004_amass_only": {
+      "absolute_mpjpe_mm": 115.21179974079132,
+      "root_error_mm": 75.15709847211838,
+      "root_aligned_mpjpe_mm": 87.27847039699554,
+      "p_mpjpe_mm": 73.16402345895767,
+      "action_groups_mm": {
+        "In-Place": 97.91567825467806,
+        "Sit-In-Place": 114.20625707745414,
+        "Non-In-Place": 137.37884534030894,
+        "Micro Average": 115.21180089700431
+      },
+      "checkpoint_sha256": "1dca9eed7eeec3057527da5e1fc05446dc539a552949fb811c9eb1690abc131c"
+    }
+  },
+  "checkpoint_sha256": {
+    "m4human_s2_radar": "70eaa67034186c37781ce79324951abb80a7ab641a8b78d73c69b14b41b9c91d",
+    "m4human_s3_radar": "184022e2ee23d535a5154dcb6fd8bb3ea288a874730d16c1cfb235067c042134",
+    "mmbody_radar": "e4e2bef679209cbb4466c21008d27f40be0d5bde3cb27681d874c0047a2a7c45",
+    "m4human_s2_stage2": [
+      "213a15c9b0ac0ec260443ec3659fae2567e762a242cd1a7014624ac68ea20eed",
+      "5dbf80748220c9e2ae28f8d4ab146da2f42f07821ea534187225e7d5101660ec",
+      "cf40cb48d87f20ddac8a32a37826a1a7c2437473d39282220a35065bbcb07222"
+    ],
+    "m4human_s3_stage2": [
+      "c9dea2025da1643783c31fd47a3135391c9fce1727f3ff33d107c6bc3c0b006c",
+      "fcc945ec84848563d803807a6cb8696db53044c21293c6de4d667bc77b3d370d",
+      "c0b20c964ba8bdd80544244ffe9863f74496c5ce17b4db46ccb3038e86ae0839"
+    ],
+    "mmbody_stage2": [
+      "1cc34fb868d35835142f074dc2ee8b5e89eb8151cd7fee8cd72573671adb65d4",
+      "15b8fe27d77b36c91d87c9bd078e129617a87d565fe16135ccedc7388b13b28d",
+      "93e54f1a49f56ae4808c5f8359f3c033aaea0a73177a5dc9ea0efad4e501438b"
+    ]
+  }
+}
