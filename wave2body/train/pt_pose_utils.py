@@ -13,11 +13,11 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 try:
-    from ..models.point_transformer.pose_baseline import PTPoseModel, PoseMPJPELoss
+    from ..models.point_transformer.pose_baseline import PTPoseModel, PoseMPJPELoss, compute_pt_pose_loss
     from ..utils.metrics import compute_p_mpjpe
     from ..utils.runtime_utils import autocast_context
 except ImportError:  # Support scripts that put src/ directly on sys.path.
-    from wave2body.models.point_transformer.pose_baseline import PTPoseModel, PoseMPJPELoss
+    from wave2body.models.point_transformer.pose_baseline import PTPoseModel, PoseMPJPELoss, compute_pt_pose_loss
     from wave2body.utils.metrics import compute_p_mpjpe
     from wave2body.utils.runtime_utils import autocast_context
 
@@ -132,7 +132,7 @@ def train_one_epoch(
             torch.compiler.cudagraph_mark_step_begin()
         with autocast_context(runtime):
             outputs = model(mmwave_points)
-            loss_dict = criterion(outputs["pred_pose"].float(), target_poses.float())
+            loss_dict = compute_pt_pose_loss(criterion, outputs, target_poses)
         loss_to_backprop = loss_dict["total_loss"] / float(grad_accum_steps)
 
         if grad_scaler.is_enabled():
@@ -228,7 +228,7 @@ def validate_one_epoch(
             torch.compiler.cudagraph_mark_step_begin()
         with autocast_context(runtime):
             outputs = model(mmwave_points)
-            loss_dict = criterion(outputs["pred_pose"].float(), target_poses)
+            loss_dict = compute_pt_pose_loss(criterion, outputs, target_poses)
         for key in total:
             total[key] += float(loss_dict[key].item())
 

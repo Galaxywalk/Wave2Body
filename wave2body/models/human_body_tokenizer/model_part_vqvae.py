@@ -101,6 +101,24 @@ class PartMLPDecoder(nn.Module):
         return out.view(bsz, self.output_dim // 3, 3)
 
 
+class PartLinearDecoder(nn.Module):
+    """Single linear coordinate head per body part (for Stage-2-prior-free ablation)."""
+
+    def __init__(self, token_num: int, token_dim: int, output_dim: int):
+        super().__init__()
+        self.token_num = token_num
+        self.token_dim = token_dim
+        self.output_dim = output_dim
+        self.net = nn.Linear(token_num * token_dim, output_dim)
+
+    def forward(self, part_tokens: torch.Tensor) -> torch.Tensor:
+        bsz = part_tokens.shape[0]
+        out = self.net(part_tokens.reshape(bsz, -1))
+        if self.output_dim % 3 != 0:
+            raise ValueError(f"Decoder output_dim must be divisible by 3, got {self.output_dim}")
+        return out.view(bsz, self.output_dim // 3, 3)
+
+
 class PartEMAVectorQuantizer(nn.Module):
     """
     EMA-based vector quantizer with optional stale-code reset.
@@ -305,6 +323,7 @@ class PartJointTokenizer(nn.Module):
         part_token_num: Union[int, Mapping[str, int]] = DEFAULT_PART_TOKEN_NUM,
         part_codebook_size: Union[int, Mapping[str, int]] = 64,
         drop_rate: float = 0.0,
+        decoder_type: str = 'mlp',
     ):
         super().__init__()
         self.num_joints = num_joints
@@ -343,13 +362,23 @@ class PartJointTokenizer(nn.Module):
                 hidden_dim=part_hidden_dim,
                 dropout=part_dropout,
             )
-            self.decoders[name] = PartMLPDecoder(
-                token_num=n_token,
-                token_dim=token_dim,
-                output_dim=in_dim,
-                hidden_dim=part_hidden_dim,
-                dropout=part_dropout,
-            )
+            dec_mode = str(decoder_type or 'mlp').strip().lower()
+            if dec_mode == 'linear':
+                self.decoders[name] = PartLinearDecoder(
+                    token_num=n_token,
+                    token_dim=token_dim,
+                    output_dim=in_dim,
+                )
+            elif dec_mode == 'mlp':
+                self.decoders[name] = PartMLPDecoder(
+                    token_num=n_token,
+                    token_dim=token_dim,
+                    output_dim=in_dim,
+                    hidden_dim=part_hidden_dim,
+                    dropout=part_dropout,
+                )
+            else:
+                raise ValueError(f"Unsupported vqvae.decoder_type={decoder_type!r}")
             self.quantizers[name] = PartEMAVectorQuantizer(
                 num_codes=n_code,
                 code_dim=token_dim,
@@ -550,4 +579,5 @@ def create_part_joint_tokenizer(config: Mapping[str, object]) -> PartJointTokeni
         part_token_num=config.get('part_token_num', DEFAULT_PART_TOKEN_NUM),
         part_codebook_size=config.get('part_codebook_size', config.get('token_class_num', 64)),
         drop_rate=float(config.get('drop_rate', 0.0)),
+        decoder_type=str(config.get('decoder_type', 'mlp')),
     )

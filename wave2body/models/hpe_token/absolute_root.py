@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 
 from .common import load_state_dict_shape_safe
+from .decoder import decode_part_token_logits
 from .estimator import TokenHPEEstimatorModel, _extract_mmwave_tokenizer_state_dict
 from ..human_body_tokenizer import load_pretrained_vqvae
 from ...utils.paths import resolve_runtime_uri
@@ -124,9 +125,11 @@ class AbsoluteRootHead(nn.Module):
         attention_hidden_dim: int | None = None,
         attention_heads: int = 4,
         num_query_tokens: int = 4,
+        use_point_stats: bool = True,
     ) -> None:
         super().__init__()
         self.sensor_token_dim = int(sensor_token_dim)
+        self.use_point_stats = bool(use_point_stats)
         self.point_stats_dim = int(point_stats_dim)
         if self.point_stats_dim <= 0:
             raise ValueError(f"root_head.point_stats_dim must be positive, got {self.point_stats_dim}")
@@ -146,47 +149,55 @@ class AbsoluteRootHead(nn.Module):
                 f"{self.prior_mode!r}; expected one of "
                 "['none', 'point_mean', 'point_bbox_midpoint', 'point_intensity_weighted_mean']"
             )
-        if self.architecture != "query_attn":
+        if self.architecture not in {"query_attn", "mlp"}:
             raise ValueError(
                 f"Unsupported root_head.architecture={self.architecture!r}; "
-                "production HPE-token uses 'query_attn'. Historical root-head "
-                "architectures live under wave2body.models.hpe_token.baselines."
+                "expected 'query_attn' or 'mlp'."
             )
         center_dim = 9 if self.use_centers else 0
-        attn_hidden = int(attention_hidden_dim or hidden_dim)
-        heads = max(1, int(attention_heads))
-        if attn_hidden % heads != 0:
-            raise ValueError(f"root_head.attention_hidden_dim={attn_hidden} must be divisible by attention_heads={heads}")
-        self.num_query_tokens = max(1, int(num_query_tokens))
-        token_feature_dim = self.sensor_token_dim + (6 if self.use_centers else 0)
-        context_dim = self.point_stats_dim + center_dim
-        self.token_proj = nn.Sequential(
-            nn.Linear(token_feature_dim, attn_hidden),
-            nn.GELU(),
-            nn.Dropout(float(dropout)),
-            nn.Linear(attn_hidden, attn_hidden),
-        )
-        self.context_proj = _build_hidden_mlp(context_dim, attn_hidden, 2, float(dropout))
-        self.query_tokens = nn.Parameter(torch.empty(1, self.num_query_tokens, attn_hidden))
-        nn.init.trunc_normal_(self.query_tokens, std=0.02)
-        self.cross_attn = nn.MultiheadAttention(
-            embed_dim=attn_hidden,
-            num_heads=heads,
-            dropout=float(dropout),
-            batch_first=True,
-        )
-        self.query_norm = nn.LayerNorm(attn_hidden)
-        self.token_norm = nn.LayerNorm(attn_hidden)
-        self.query_ffn = nn.Sequential(
-            nn.LayerNorm(attn_hidden),
-            nn.Linear(attn_hidden, attn_hidden * 2),
-            nn.GELU(),
-            nn.Dropout(float(dropout)),
-            nn.Linear(attn_hidden * 2, attn_hidden),
-            nn.Dropout(float(dropout)),
-        )
-        input_dim = self.sensor_token_dim * 2 + attn_hidden + self.point_stats_dim + center_dim
-        self.net = _build_residual_mlp(input_dim, int(hidden_dim), int(num_layers), float(dropout))
+        active_point_stats_dim = self.point_stats_dim if self.use_point_stats else 0
+        if self.architecture == "mlp":
+            input_dim = self.sensor_token_dim * 2 + active_point_stats_dim + center_dim
+            self.net = _build_residual_mlp(input_dim, int(hidden_dim), int(num_layers), float(dropout))
+        else:
+            attn_hidden = int(attention_hidden_dim or hidden_dim)
+            heads = max(1, int(attention_heads))
+            if attn_hidden % heads != 0:
+                raise ValueError(f"root_head.attention_hidden_dim={attn_hidden} must be divisible by attention_heads={heads}")
+            self.num_query_tokens = max(1, int(num_query_tokens))
+            token_feature_dim = self.sensor_token_dim + (6 if self.use_centers else 0)
+            context_dim = active_point_stats_dim + center_dim
+            self.token_proj = nn.Sequential(
+                nn.Linear(token_feature_dim, attn_hidden),
+                nn.GELU(),
+                nn.Dropout(float(dropout)),
+                nn.Linear(attn_hidden, attn_hidden),
+            )
+            self.context_proj = (
+                _build_hidden_mlp(context_dim, attn_hidden, 2, float(dropout))
+                if context_dim > 0
+                else None
+            )
+            self.query_tokens = nn.Parameter(torch.empty(1, self.num_query_tokens, attn_hidden))
+            nn.init.trunc_normal_(self.query_tokens, std=0.02)
+            self.cross_attn = nn.MultiheadAttention(
+                embed_dim=attn_hidden,
+                num_heads=heads,
+                dropout=float(dropout),
+                batch_first=True,
+            )
+            self.query_norm = nn.LayerNorm(attn_hidden)
+            self.token_norm = nn.LayerNorm(attn_hidden)
+            self.query_ffn = nn.Sequential(
+                nn.LayerNorm(attn_hidden),
+                nn.Linear(attn_hidden, attn_hidden * 2),
+                nn.GELU(),
+                nn.Dropout(float(dropout)),
+                nn.Linear(attn_hidden * 2, attn_hidden),
+                nn.Dropout(float(dropout)),
+            )
+            input_dim = self.sensor_token_dim * 2 + attn_hidden + active_point_stats_dim + center_dim
+            self.net = _build_residual_mlp(input_dim, int(hidden_dim), int(num_layers), float(dropout))
 
     def _root_prior(self, point_stats: torch.Tensor | None, *, batch_size: int, device: torch.device) -> torch.Tensor:
         if self.prior_mode == "none":
@@ -310,8 +321,19 @@ class AbsoluteRootHead(nn.Module):
             batch_size=batch_size,
             device=device,
         )
-        point_features = self._point_stats_features(point_stats, batch_size=batch_size, device=device)
+        point_features = (
+            self._point_stats_features(point_stats, batch_size=batch_size, device=device)
+            if self.use_point_stats
+            else torch.zeros(batch_size, 0, device=device, dtype=torch.float32)
+        )
         features = [token_mean, token_max]
+        if self.architecture == "mlp":
+            if self.use_centers:
+                features.append(center_summary)
+            if self.use_point_stats:
+                features.append(point_features)
+            return self.net(torch.cat(features, dim=-1)).float()
+
         token_inputs = [mmwave_tokens.float()]
         if self.use_centers:
             assert center_tokens is not None
@@ -319,14 +341,19 @@ class AbsoluteRootHead(nn.Module):
             token_inputs.extend([center_tokens, center_tokens - prior.unsqueeze(1)])
         token_features = torch.cat(token_inputs, dim=-1)
         token_repr = self.token_norm(self.token_proj(token_features))
-        context_features = torch.cat([point_features, center_summary], dim=-1)
-        query_context = self.context_proj(context_features).unsqueeze(1)
-        queries = self.query_tokens.expand(batch_size, -1, -1) + query_context
-        key_padding_mask = ~mmwave_mask
-        all_invalid = key_padding_mask.all(dim=1)
-        if all_invalid.any():
-            key_padding_mask = key_padding_mask.clone()
-            key_padding_mask[all_invalid] = False
+        ctx_parts = []
+        if self.use_point_stats:
+            ctx_parts.append(point_features)
+        if self.use_centers:
+            ctx_parts.append(center_summary)
+        if self.context_proj is not None and ctx_parts:
+            context_features = torch.cat(ctx_parts, dim=-1)
+            query_context = self.context_proj(context_features).unsqueeze(1)
+            queries = self.query_tokens.expand(batch_size, -1, -1) + query_context
+        else:
+            queries = self.query_tokens.expand(batch_size, -1, -1)
+        # Branchless guard avoids host sync when all sensor tokens in a sample are masked out.
+        key_padding_mask = (~mmwave_mask) & mmwave_mask.any(dim=1, keepdim=True)
         attn_out, _ = self.cross_attn(
             self.query_norm(queries),
             token_repr,
@@ -339,7 +366,8 @@ class AbsoluteRootHead(nn.Module):
         features.append(query_tokens.mean(dim=1))
         if self.use_centers:
             features.append(center_summary)
-        features.append(point_features)
+        if self.use_point_stats:
+            features.append(point_features)
         return self.net(torch.cat(features, dim=-1)).float()
 
 
@@ -364,6 +392,8 @@ class AbsoluteRootHeadEstimatorModel(TokenHPEEstimatorModel):
         freeze_mmwave_tokenizer: bool = True,
         freeze_token_translator: bool = False,
         freeze_vqvae: bool = True,
+        bypass_vq_quantization: bool = False,
+        pose_decode_cfg: Optional[dict] = None,
     ) -> None:
         super().__init__(
             mmwave_tokenizer_config=mmwave_tokenizer_config,
@@ -374,7 +404,9 @@ class AbsoluteRootHeadEstimatorModel(TokenHPEEstimatorModel):
             freeze_mmwave_tokenizer=freeze_mmwave_tokenizer,
             freeze_token_translator=freeze_token_translator,
             freeze_vqvae=freeze_vqvae,
+            bypass_vq_quantization=bypass_vq_quantization,
         )
+        self.pose_decode_cfg = dict(pose_decode_cfg) if isinstance(pose_decode_cfg, dict) else None
         root_cfg = dict(root_head_config or {})
         self.root_index = int(vqvae_config.get("root_index", root_cfg.pop("root_index", 0)))
         attention_hidden_dim = root_cfg.pop("attention_hidden_dim", None)
@@ -391,9 +423,47 @@ class AbsoluteRootHeadEstimatorModel(TokenHPEEstimatorModel):
             attention_hidden_dim=None if attention_hidden_dim is None else int(attention_hidden_dim),
             attention_heads=int(root_cfg.pop("attention_heads", 4)),
             num_query_tokens=int(root_cfg.pop("num_query_tokens", 4)),
+            use_point_stats=bool(root_cfg.pop("use_point_stats", True)),
         )
         if root_cfg:
             raise ValueError(f"Unused root_head config keys: {sorted(root_cfg)}")
+
+    def _uses_learned_logit_decode(self) -> bool:
+        return (
+            self.pose_decode_cfg is not None
+            and bool(self.pose_decode_cfg.get("enabled", False))
+            and bool(self.pose_decode_cfg.get("apply_in_absolute_stage", False))
+            and str(self.pose_decode_cfg.get("source", "learned")).strip().lower()
+            in {"learned", "learned_classifier"}
+        )
+
+    def _decode_relative_pose(
+        self,
+        pred_z_e: torch.Tensor,
+        pred_logits: Optional[torch.Tensor],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        if self.bypass_vq_quantization:
+            with torch.no_grad():
+                _, pred_indices = self.quantize_tokens(pred_z_e)
+            pred_z_q = pred_z_e
+            return pred_z_q, pred_indices, self.vqvae.decode(pred_z_q)
+        if self._uses_learned_logit_decode():
+            assert self.pose_decode_cfg is not None
+            mode = (
+                str(self.pose_decode_cfg.get("mode", "argmax_st"))
+                if self.training
+                else str(self.pose_decode_cfg.get("eval_mode", "argmax"))
+            )
+            tau = float(self.pose_decode_cfg.get("temperature", 1.0))
+            decoded = decode_part_token_logits(
+                vqvae=self.vqvae,
+                pred_logits=pred_logits,
+                mode=mode,
+                temperature=tau,
+            )
+            return decoded.z_q, decoded.indices, decoded.pose
+        pred_z_q, pred_indices = self.quantize_tokens(pred_z_e)
+        return pred_z_q, pred_indices, self.vqvae.decode(pred_z_q)
 
     def forward(
         self,
@@ -420,8 +490,7 @@ class AbsoluteRootHeadEstimatorModel(TokenHPEEstimatorModel):
             centers = encoded.get("centers")
 
         pred_z_e, pred_logits = self._translate(mmwave_tokens, mmwave_token_mask)
-        pred_z_q, pred_indices = self.quantize_tokens(pred_z_e)
-        pred_pose_relative = self.vqvae.decode(pred_z_q)
+        pred_z_q, pred_indices, pred_pose_relative = self._decode_relative_pose(pred_z_e, pred_logits)
 
         if point_root_stats is None:
             point_root_stats = masked_point_root_stats(mmwave_points)

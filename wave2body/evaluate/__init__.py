@@ -28,6 +28,13 @@ __all__ = [
     "print_human_pose_tokenizer_reconstruction_summary",
     "save_human_pose_tokenizer_reconstruction",
     "save_meshes_as_obj",
+    "apply_temporal_filter",
+    "compute_anatomical_pose_metrics",
+    "compute_pre_cap_point_counts",
+    "compute_same_prev_mask",
+    "compute_temporal_smoothness_metrics",
+    "extract_sequence_metadata",
+    "summarize_metric_vectors",
 ]
 
 
@@ -62,6 +69,13 @@ _EXPORTS = {
     "print_human_pose_tokenizer_reconstruction_summary": ("human_pose_tokenizer_reconstruction", "print_summary"),
     "save_human_pose_tokenizer_reconstruction": ("human_pose_tokenizer_reconstruction", "save_evaluation"),
     "save_meshes_as_obj": ("joint_to_mesh", "save_meshes_as_obj"),
+    "apply_temporal_filter": ("diagnostics", "apply_temporal_filter"),
+    "compute_anatomical_pose_metrics": ("diagnostics", "compute_anatomical_pose_metrics"),
+    "compute_pre_cap_point_counts": ("diagnostics", "compute_pre_cap_point_counts"),
+    "compute_same_prev_mask": ("diagnostics", "compute_same_prev_mask"),
+    "compute_temporal_smoothness_metrics": ("diagnostics", "compute_temporal_smoothness_metrics"),
+    "extract_sequence_metadata": ("diagnostics", "extract_sequence_metadata"),
+    "summarize_metric_vectors": ("diagnostics", "summarize_metric_vectors"),
 }
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import gzip
+import json
 import os
 import pickle
 import struct
@@ -286,6 +287,14 @@ class M4HumanLMDBPoseDataset(Dataset):
         self._temporal_index: dict[tuple[int, int, int], list[int]] = {}
         self._temporal_sequences: dict[tuple[int, int], list[int]] = {}
         self._build_temporal_lookup()
+
+        # Apply optional stratified low-label subset AFTER _build_temporal_lookup() so
+        # retained training frames can still access their full causal history windows.
+        subset_path = m4.get("train_subset_indices_path")
+        if self.split == "train" and subset_path not in (None, "", "null"):
+            idx_file = Path(resolve_dataset_uri(str(subset_path)))
+            keep_idx = json.loads(idx_file.read_text(encoding="utf-8"))
+            self.data_list = [self.data_list[int(i)] for i in keep_idx]
 
     def __getstate__(self) -> dict:
         state = self.__dict__.copy()

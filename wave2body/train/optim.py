@@ -41,6 +41,9 @@ def build_hpe_token_optimizer(model: torch.nn.Module, config: dict) -> torch.opt
     root_head_params = [] if root_head_module is None else [p for p in root_head_module.parameters() if p.requires_grad]
     tokenizer_module = getattr(model, "mmwave_tokenizer", None)
     tokenizer_params = [] if tokenizer_module is None else [p for p in tokenizer_module.parameters() if p.requires_grad]
+    vqvae_module = getattr(model, "vqvae", None)
+    vqvae_params = [] if vqvae_module is None else [p for p in vqvae_module.parameters() if p.requires_grad]
+    vqvae_lr_mult = float(training_cfg.get("vqvae_lr_mult", 1.0))
 
     param_groups: list[dict[str, Any]] = []
     if translator_params:
@@ -49,6 +52,8 @@ def build_hpe_token_optimizer(model: torch.nn.Module, config: dict) -> torch.opt
         param_groups.append({"params": root_head_params, "lr": base_lr, "name": "absolute_root_head"})
     if tokenizer_params:
         param_groups.append({"params": tokenizer_params, "lr": base_lr * tokenizer_lr_mult, "name": "mmwave_tokenizer"})
+    if vqvae_params:
+        param_groups.append({"params": vqvae_params, "lr": base_lr * vqvae_lr_mult, "name": "vqvae"})
     if not param_groups:
         raise RuntimeError("No trainable parameters found for HPE token optimizer.")
 
@@ -57,6 +62,7 @@ def build_hpe_token_optimizer(model: torch.nn.Module, config: dict) -> torch.opt
         f"human_token_translator={safe_param_count(translator_params):,}, "
         f"absolute_root_head={safe_param_count(root_head_params):,}, "
         f"mmwave_tokenizer={safe_param_count(tokenizer_params):,}, "
+        f"vqvae={safe_param_count(vqvae_params):,}, "
         f"mmwave_tokenizer_lr_mult={tokenizer_lr_mult:.3f}"
     )
     return torch.optim.AdamW(param_groups, lr=base_lr, weight_decay=weight_decay)

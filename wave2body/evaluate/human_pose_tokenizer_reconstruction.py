@@ -94,10 +94,10 @@ def evaluate_dataset(
         persistent_workers=(int(num_workers) > 0),
     )
 
-    layout = model.layout
+    layout = getattr(model, "layout", None)
     num_joints = int(training_config["model"]["num_joints"])
     global_used = torch.zeros(int(model.token_class_num), dtype=torch.bool)
-    part_acc = _empty_part_accumulators(layout)
+    part_acc = _empty_part_accumulators(layout) if layout is not None else {}
     total_l2 = 0.0
     total_l1 = 0.0
     total_sq = 0.0
@@ -139,16 +139,17 @@ def evaluate_dataset(
 
         idx_cpu = indices_global.detach().cpu()
         global_used[idx_cpu.reshape(-1)] = True
-        local_by_part = layout.split_global_indices(idx_cpu)
-        for name in layout.part_names:
-            part_idx = torch.as_tensor(layout.part_joints[name], device=device, dtype=torch.long)
-            part_l2 = l2.index_select(1, part_idx)
-            part_abs = abs_diff.index_select(1, part_idx)
-            part_acc[name]["l2_sum"] += float(part_l2.sum().item())
-            part_acc[name]["l1_sum"] += float(part_abs.sum().item())
-            part_acc[name]["joint_count"] += bsz * len(layout.part_joints[name])
-            part_acc[name]["coord_count"] += bsz * len(layout.part_joints[name]) * 3
-            part_acc[name]["used_codes"][local_by_part[name].reshape(-1)] = True
+        if layout is not None:
+            local_by_part = layout.split_global_indices(idx_cpu)
+            for name in layout.part_names:
+                part_idx = torch.as_tensor(layout.part_joints[name], device=device, dtype=torch.long)
+                part_l2 = l2.index_select(1, part_idx)
+                part_abs = abs_diff.index_select(1, part_idx)
+                part_acc[name]["l2_sum"] += float(part_l2.sum().item())
+                part_acc[name]["l1_sum"] += float(part_abs.sum().item())
+                part_acc[name]["joint_count"] += bsz * len(layout.part_joints[name])
+                part_acc[name]["coord_count"] += bsz * len(layout.part_joints[name]) * 3
+                part_acc[name]["used_codes"][local_by_part[name].reshape(-1)] = True
 
         if compute_p_mpjpe:
             p_vals = per_sample_p_mpjpe_mm(recovered.detach().cpu(), joints.detach().cpu())

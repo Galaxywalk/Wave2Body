@@ -603,7 +603,7 @@ def train_hpe_token_epoch(
             loss_dict,
             outputs,
             model=model,
-            layout=model.vqvae.layout,
+            layout=getattr(model.vqvae, "layout", None),
             ablation_cfg=ablation_loss_cfg,
             target_poses=target_poses,
         )
@@ -782,7 +782,7 @@ def validate_hpe_token(
             loss_dict,
             outputs,
             model=model,
-            layout=model.vqvae.layout,
+            layout=getattr(model.vqvae, "layout", None),
             ablation_cfg=ablation_loss_cfg,
             target_poses=target_poses,
         )

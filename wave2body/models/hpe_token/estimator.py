@@ -53,12 +53,14 @@ class TokenHPEEstimatorModel(nn.Module):
         freeze_mmwave_tokenizer: bool = True,
         freeze_token_translator: bool = False,
         freeze_vqvae: bool = True,
+        bypass_vq_quantization: bool = False,
     ) -> None:
         super().__init__()
         self.device = device
         self.freeze_mmwave_tokenizer = bool(freeze_mmwave_tokenizer)
         self.freeze_token_translator = bool(freeze_token_translator)
         self.freeze_vqvae = bool(freeze_vqvae)
+        self.bypass_vq_quantization = bool(bypass_vq_quantization)
         self.vqvae_config = dict(vqvae_config)
         self.mmwave_tokenizer_config = dict(mmwave_tokenizer_config)
         self.sensor_token_config = dict(sensor_token_config or {})
@@ -213,7 +215,12 @@ class TokenHPEEstimatorModel(nn.Module):
             mmwave_token_centers = encoded.get("centers")
 
         pred_z_e, pred_logits = self._translate(mmwave_tokens, mmwave_token_mask)
-        pred_z_q, pred_indices = self.quantize_tokens(pred_z_e)
+        if self.bypass_vq_quantization:
+            with torch.no_grad():
+                _, pred_indices = self.quantize_tokens(pred_z_e)
+            pred_z_q = pred_z_e
+        else:
+            pred_z_q, pred_indices = self.quantize_tokens(pred_z_e)
         pred_pose = self.vqvae.decode(pred_z_q)
 
         out = {

@@ -48,12 +48,14 @@ class AblationTokenHPEEstimatorModel(TokenHPEEstimatorModel):
         freeze_mmwave_tokenizer: bool = True,
         freeze_token_translator: bool = False,
         freeze_vqvae: bool = True,
+        bypass_vq_quantization: bool = False,
     ) -> None:
         nn.Module.__init__(self)
         self.device = device
         self.freeze_mmwave_tokenizer = bool(freeze_mmwave_tokenizer)
         self.freeze_token_translator = bool(freeze_token_translator)
         self.freeze_vqvae = bool(freeze_vqvae)
+        self.bypass_vq_quantization = bool(bypass_vq_quantization)
         self.vqvae_config = dict(vqvae_config)
         self.mmwave_tokenizer_config = dict(mmwave_tokenizer_config)
         self.sensor_token_config = dict(sensor_token_config or {})

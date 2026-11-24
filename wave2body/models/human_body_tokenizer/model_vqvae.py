@@ -79,7 +79,12 @@ class JointTokenizer(nn.Module):
                  dec_dropout: float = 0.1,
 
                  # 训练参数
-                 drop_rate: float = 0.0):  # random masking rate
+                 drop_rate: float = 0.0,  # random masking rate
+                 quantizer_type: str = 'ema',
+                 init_from_data: bool = False,
+                 reset_threshold: float = 1.0,
+                 reset_noise_std: float = 1e-2,
+                 reset_min_active_frac: float = 0.0):
 
         super().__init__()
 
@@ -131,14 +136,31 @@ class JointTokenizer(nn.Module):
         self.feature_embed = nn.Linear(enc_hidden_dim, token_dim)
 
         # === Codebook部分（VQ-VAE的核心）===
-        # 注册codebook相关的buffer（不会被梯度更新）
-        self.register_buffer('codebook', torch.empty(token_class_num, token_dim))
-        self.codebook.data.normal_()
+        self.quantizer_type = str(quantizer_type or 'ema')
+        self.init_from_data = bool(init_from_data)
+        self.last_quantizer_stats: Dict[str, float] = {}
+        if self.quantizer_type == 'ema_reset' or self.init_from_data:
+            from .model_part_vqvae import PartEMAVectorQuantizer
+            self.quantizer = PartEMAVectorQuantizer(
+                num_codes=token_class_num,
+                code_dim=token_dim,
+                quantizer_type=self.quantizer_type,
+                ema_decay=ema_decay,
+                reset_threshold=reset_threshold,
+                reset_noise_std=reset_noise_std,
+                reset_min_active_frac=reset_min_active_frac,
+                init_from_data=self.init_from_data,
+            )
+        else:
+            self.quantizer = None
+            # 注册codebook相关的buffer（不会被梯度更新）
+            self.register_buffer('codebook', torch.empty(token_class_num, token_dim))
+            self.codebook.data.normal_()
 
-        # EMA更新相关的buffer
-        self.register_buffer('ema_cluster_size', torch.zeros(token_class_num))
-        self.register_buffer('ema_w', torch.empty(token_class_num, token_dim))
-        self.ema_w.data.normal_()
+            # EMA更新相关的buffer
+            self.register_buffer('ema_cluster_size', torch.zeros(token_class_num))
+            self.register_buffer('ema_w', torch.empty(token_class_num, token_dim))
+            self.ema_w.data.normal_()
 
         # === 解码器部分 ===
         # Token恢复层
@@ -155,6 +177,39 @@ class JointTokenizer(nn.Module):
 
         # 输出层 - 恢复到原始关节维度
         self.recover_embed = nn.Linear(dec_hidden_dim, input_dim)
+
+    def __getattr__(self, name: str):
+        if name == 'codebook':
+            quantizer = self._modules.get('quantizer')
+            if quantizer is not None:
+                return quantizer.codebook
+        return super().__getattr__(name)
+
+    def get_quantizer_metrics(self) -> Dict[str, float]:
+        return dict(self.last_quantizer_stats)
+
+    def quantize_tokens(
+        self,
+        continuous_tokens: torch.Tensor,
+        apply_straight_through: bool = True,
+    ):
+        bsz, n_tokens, token_dim = continuous_tokens.shape
+        if self.quantizer is not None:
+            flat = continuous_tokens.reshape(-1, token_dim)
+            idx = self.quantizer.quantize(flat).view(bsz, n_tokens)
+            zq = self.quantizer.dequantize(idx.reshape(-1)).view(bsz, n_tokens, token_dim)
+        else:
+            flat = continuous_tokens.reshape(-1, token_dim)
+            dist = (
+                torch.sum(flat ** 2, dim=1, keepdim=True)
+                + torch.sum(self.codebook ** 2, dim=1)
+                - 2 * torch.matmul(flat, self.codebook.t())
+            )
+            idx = torch.argmin(dist, dim=1).view(bsz, n_tokens)
+            zq = self.codebook[idx.reshape(-1)].view(bsz, n_tokens, token_dim)
+        if apply_straight_through:
+            zq = continuous_tokens + (zq - continuous_tokens).detach()
+        return zq, idx
 
     def encode(self, joints, joints_visible=None, train=True):
         """
@@ -195,6 +250,10 @@ class JointTokenizer(nn.Module):
         encode_feat = encode_feat.transpose(2, 1)  # (B, enc_hidden_dim, num_joints)
         encode_feat = self.token_mlp(encode_feat).transpose(2, 1)  # (B, token_num, enc_hidden_dim)
         encode_feat = self.feature_embed(encode_feat)  # (B, token_num, token_dim)
+        if self.quantizer is not None:
+            indices, quantized_features, e_latent_loss, stats = self.quantizer(encode_feat, train=train)
+            self.last_quantizer_stats = dict(stats)
+            return indices, quantized_features, e_latent_loss
         encode_feat_flat = encode_feat.flatten(0, 1)  # (B*token_num, token_dim)
 
         # Vector Quantization
@@ -473,7 +532,12 @@ def create_joint_tokenizer(config: Dict) -> nn.Module:
         dec_dropout=config.get('dec_dropout', 0.1),
 
         # 训练参数
-        drop_rate=config.get('drop_rate', 0.0)
+        drop_rate=config.get('drop_rate', 0.0),
+        quantizer_type=config.get('quantizer_type', 'ema'),
+        init_from_data=bool(config.get('init_from_data', False)),
+        reset_threshold=float(config.get('reset_threshold', 1.0)),
+        reset_noise_std=float(config.get('reset_noise_std', 1e-2)),
+        reset_min_active_frac=float(config.get('reset_min_active_frac', 0.0)),
     )
 
 

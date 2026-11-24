@@ -951,7 +951,7 @@ def evaluate_hpe_token(
                 raise RuntimeError("evaluation.token_topk_oracle requires model outputs['pred_logits'].")
             for k in token_topk_oracle_totals:
                 oracle_indices = _topk_oracle_indices_from_logits(
-                    layout=model.vqvae.layout,
+                    layout=getattr(model.vqvae, "layout", None),
                     pred_logits=oracle_logits,
                     target_indices=outputs["target_indices"],
                     topk=int(k),
@@ -1185,6 +1185,9 @@ def _load_hpe_token_model_for_eval(
         freeze_mmwave_tokenizer=bool(training_cfg.get("freeze_mmwave_tokenizer", True)),
         freeze_token_translator=bool(training_cfg.get("freeze_token_translator", False)),
         freeze_vqvae=bool(training_cfg.get("freeze_vqvae", True)),
+        bypass_vq_quantization=bool(
+            training_cfg.get("bypass_vq_quantization", config["vqvae"].get("bypass_quantization", False))
+        ),
     )
     pretrained = config.get("pretrained", {})
     model.load_pretrained_weights(
@@ -1241,7 +1244,10 @@ def run_hpe_token_evaluation(
         checkpoint_models = None
         checkpoint_weights = None
     criterion = _token_loss_from_config(training_cfg)
-    soft_token_criterion, soft_token_weight = _soft_token_loss_from_config(training_cfg, model.vqvae.layout)
+    soft_token_criterion, soft_token_weight = _soft_token_loss_from_config(
+        training_cfg,
+        getattr(model.vqvae, "layout", None),
+    )
     if soft_token_criterion is not None:
         soft_token_criterion = soft_token_criterion.to(device_obj)
     metrics = evaluate_hpe_token(
@@ -1334,6 +1340,9 @@ def run_hpe_token(
         freeze_mmwave_tokenizer=bool(training_cfg.get("freeze_mmwave_tokenizer", True)),
         freeze_token_translator=bool(training_cfg.get("freeze_token_translator", False)),
         freeze_vqvae=bool(training_cfg.get("freeze_vqvae", True)),
+        bypass_vq_quantization=bool(
+            training_cfg.get("bypass_vq_quantization", config["vqvae"].get("bypass_quantization", False))
+        ),
     )
     pretrained = config.get("pretrained", {})
     model.load_pretrained_weights(
@@ -1389,7 +1398,10 @@ def run_hpe_token(
     )
 
     criterion = _token_loss_from_config(training_cfg)
-    soft_token_criterion, soft_token_weight = _soft_token_loss_from_config(training_cfg, model.vqvae.layout)
+    soft_token_criterion, soft_token_weight = _soft_token_loss_from_config(
+        training_cfg,
+        getattr(model.vqvae, "layout", None),
+    )
     if soft_token_criterion is not None:
         soft_token_criterion = soft_token_criterion.to(device_obj)
         print(f"[HPE Token] Soft token CE enabled | weight={soft_token_weight:.4g}")

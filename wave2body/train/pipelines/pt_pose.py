@@ -39,7 +39,13 @@ try:
         M4HumanActionGroupVectorAccumulator,
         m4human_action_ids_from_indicator,
     )
-    from ...models.point_transformer.pose_baseline import PTPoseModel, PoseMPJPELoss
+    from ...models.point_transformer.pose_baseline import (
+        PTDecoupledRootPoseModel,
+        PTPoseModel,
+        PoseDecoupledRootLoss,
+        PoseMPJPELoss,
+        compute_pt_pose_loss,
+    )
     from ...utils.metrics import compute_per_sample_p_mpjpe
     from ...utils.runtime_utils import autocast_context, build_grad_scaler, configure_runtime, maybe_compile
 except ImportError:  # Support scripts that put src/ directly on sys.path.
@@ -65,7 +71,13 @@ except ImportError:  # Support scripts that put src/ directly on sys.path.
         train_one_epoch,
         validate_one_epoch,
     )
-    from wave2body.models.point_transformer.pose_baseline import PTPoseModel, PoseMPJPELoss
+    from wave2body.models.point_transformer.pose_baseline import (
+        PTDecoupledRootPoseModel,
+        PTPoseModel,
+        PoseDecoupledRootLoss,
+        PoseMPJPELoss,
+        compute_pt_pose_loss,
+    )
     from wave2body.utils.metrics import compute_per_sample_p_mpjpe
     from wave2body.utils.runtime_utils import autocast_context, build_grad_scaler, configure_runtime, maybe_compile
 
@@ -175,7 +187,7 @@ def evaluate_mpjpe_only(
         with autocast_context(runtime):
             outputs = model(mmwave_points)
         pred_pose = outputs["pred_pose"].float()
-        loss_dict = criterion(pred_pose, target_poses)
+        loss_dict = compute_pt_pose_loss(criterion, outputs, target_poses)
         for key in totals:
             totals[key] += float(loss_dict[key].item()) * bsz
         per_joint_errors_m = torch.norm(pred_pose.float() - target_poses.float(), dim=-1)
@@ -361,17 +373,40 @@ def _build_eval_loader(
     return DataLoader(**kwargs)
 
 
+def _build_pt_pose_model_and_criterion(
+    config: dict[str, Any],
+    device: torch.device,
+) -> tuple[PTPoseModel | PTDecoupledRootPoseModel, PoseMPJPELoss | PoseDecoupledRootLoss]:
+    decoupled_cfg = dict(config.get("point_transformer", {}).get("decoupled_root_head") or {})
+    if bool(decoupled_cfg.get("enabled", False)):
+        model = PTDecoupledRootPoseModel(
+            point_transformer_config=config["point_transformer"],
+            root_head_config=decoupled_cfg,
+            device=str(device),
+        ).to(device)
+        criterion = PoseDecoupledRootLoss(
+            rel_weight=float(decoupled_cfg.get("rel_weight", 1.0)),
+            root_weight=float(decoupled_cfg.get("root_weight", 1.0)),
+            abs_weight=float(decoupled_cfg.get("abs_weight", 0.25)),
+            root_index=int(config.get("evaluation", {}).get("root_index", 0)),
+        ).to(device)
+        return model, criterion
+    model = PTPoseModel(
+        point_transformer_config=config["point_transformer"],
+        device=str(device),
+    ).to(device)
+    criterion = PoseMPJPELoss().to(device)
+    return model, criterion
+
+
 def _load_pt_pose_model_for_eval(
     config: dict[str, Any],
     *,
     checkpoint: str | Path,
     device: torch.device,
     runtime,
-) -> PTPoseModel:
-    model = PTPoseModel(
-        point_transformer_config=config["point_transformer"],
-        device=str(device),
-    ).to(device)
+) -> PTPoseModel | PTDecoupledRootPoseModel:
+    model, _ = _build_pt_pose_model_and_criterion(config, device)
     materialize_lazy_modules(model, config=config, device=device, runtime=runtime)
     ckpt = load_checkpoint(checkpoint, map_location=device)
     state = ckpt.get("model_state_dict", ckpt)
@@ -509,10 +544,7 @@ def run_pt_pose(
 
     train_cfg = config.get("training", {})
 
-    model = PTPoseModel(
-        point_transformer_config=config["point_transformer"],
-        device=str(device_obj),
-    ).to(device_obj)
+    model, criterion = _build_pt_pose_model_and_criterion(config, device_obj)
     materialize_lazy_modules(model, config=config, device=device_obj, runtime=runtime)
 
     pretrained_pt = config.get("pretrained", {}).get("point_transformer")
@@ -525,7 +557,6 @@ def run_pt_pose(
         load_state_dict_shape_safe(model, resume_ckpt["model_state_dict"], module_name="PTPoseModel", strict=False)
 
     model.pt = maybe_compile(model.pt, runtime, module_name="pt_backbone", log_prefix="[PT Runtime]")
-    criterion = PoseMPJPELoss().to(device_obj)
     optimizer = optim.AdamW(
         model.parameters(),
         lr=float(train_cfg.get("lr", 3e-4)),

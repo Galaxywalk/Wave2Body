@@ -676,6 +676,10 @@ def run_absolute_root_head_evaluation(
         freeze_mmwave_tokenizer=True,
         freeze_token_translator=True,
         freeze_vqvae=True,
+        bypass_vq_quantization=bool(
+            training_cfg.get("bypass_vq_quantization", config["vqvae"].get("bypass_quantization", False))
+        ),
+        pose_decode_cfg=training_cfg.get("pose_decode"),
     )
     pretrained = config.get("pretrained", {})
     model.load_pretrained_weights(
@@ -781,6 +785,10 @@ def run_absolute_root_head(
         freeze_mmwave_tokenizer=bool(training_cfg.get("freeze_mmwave_tokenizer", False)),
         freeze_token_translator=bool(training_cfg.get("freeze_token_translator", False)),
         freeze_vqvae=bool(training_cfg.get("freeze_vqvae", True)),
+        bypass_vq_quantization=bool(
+            training_cfg.get("bypass_vq_quantization", config["vqvae"].get("bypass_quantization", False))
+        ),
+        pose_decode_cfg=training_cfg.get("pose_decode"),
     )
     pretrained = config.get("pretrained", {})
     hpe_token_checkpoint = pretrained.get("hpe_token")

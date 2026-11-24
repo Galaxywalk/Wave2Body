@@ -75,6 +75,7 @@ class PointMaeTokenizer(nn.Module):
         dropout: float = 0.0,
         chamfer_weight: float = 1.0,
         feature_weight: float = 0.1,
+        fps_backend: str = "torch",
     ) -> None:
         super().__init__()
         self.input_channels = int(input_channels)
@@ -84,6 +85,7 @@ class PointMaeTokenizer(nn.Module):
         self.mask_ratio = float(mask_ratio)
         self.chamfer_weight = float(chamfer_weight)
         self.feature_weight = float(feature_weight)
+        self.fps_backend = str(fps_backend or "torch")
 
         self.patch_encoder = PointPatchEncoder(self.input_channels, latent_dim, hidden_dim, dropout)
         self.pos_embed = CenterPositionalEmbedding(latent_dim, hidden_dim)
@@ -99,6 +101,7 @@ class PointMaeTokenizer(nn.Module):
             group_size=self.group_size,
             policy=self.patch_policy,
             target_poses_absolute=target_poses_absolute,
+            fps_backend=self.fps_backend,
         )
 
     def _encode_patch_batch(self, patch_batch: PatchBatch) -> tuple[torch.Tensor, torch.Tensor]:
