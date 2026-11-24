@@ -169,6 +169,10 @@ class MMBodyDataset(BaseRadarPoseDataset):
         config = dict(config)
         data_format = dict(config.get("data_format", {}))
         data_format.setdefault("point_sampling", "random")
+        # Following standard mmBody/mmDiff single-person preprocessing, filter
+        # radar returns within a [-1, 1]^3 m human ROI to suppress background
+        # multipath clutter while keeping coordinates uncentered in the radar
+        # frame (applied identically across Wave2Body and all baselines).
         data_format.setdefault("input_root_crop", True)
         config["data_format"] = data_format
         mmbody_cfg = dict(config.get("mmbody", {})) if isinstance(config.get("mmbody", {}), dict) else {}
@@ -350,6 +354,7 @@ class MMBodyDataset(BaseRadarPoseDataset):
                 data = self._compact_store.read_radar(radar_key)
                 data[:, 3] *= 1e38
                 data[:, 4] /= 100
+                # Standard mmBody/mmDiff [-1, 1]^3 m human-ROI clutter filter (uncentered radar frame)
                 data = apply_input_root_alignment(data, root=gt_joints[0], cfg=self.root_alignment)
                 radar_list.append(data)
             return radar_list, gt_joints
@@ -371,6 +376,7 @@ class MMBodyDataset(BaseRadarPoseDataset):
                 data[:, 5] /= 100   # Scale velocity
                 data = data[:, [0, 1, 2, 3, 5]]  # xyz, intensity, velocity
 
+                # Standard mmBody/mmDiff [-1, 1]^3 m human-ROI clutter filter (uncentered radar frame)
                 data = apply_input_root_alignment(data, root=gt_joints[0], cfg=self.root_alignment)
                 radar_list.append(data)
 
