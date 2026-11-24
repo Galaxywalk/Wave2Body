@@ -411,6 +411,30 @@ Released profiler results (revision `35469ea`):
 Throughput and memory are hardware- and software-stack-dependent; parameters
 and supported-operation FLOPs should remain stable.
 
+For deployable multi-batch latency benchmarking ($E_{\mathrm{body}}$ pruned to
+12.42 M parameters, Triton valid-only FPS, batched 5-part VQ lookup, and
+optional `torch.compile(mode="reduce-overhead")`) with an automated numerical
+equivalence check:
+
+```bash
+uv run python scripts/efficiency/benchmark_deployable_latency.py \
+  --wave2body-checkpoint /path/to/wave2body/best.pth \
+  --wicompass-checkpoint /path/to/wicompass/best.pth \
+  --output-dir outputs/deployable_latency
+```
+
+### Supplementary diagnostics and low-label scaling
+
+- `scripts/supplementary/evaluate_diagnostics.py` evaluates Wave2Body and
+  baseline checkpoints for anatomical bone geometry (MBLE-All, MBLE-Distal,
+  distal limb bias, bilateral asymmetry), sparsity-stratified slices
+  (`Sparse Q20/Q10`, `Dense Q20`), seven mmBody scenarios, soft/pre-VQ decoding
+  modes, and strictly causal temporal smoothness filters (`causal_ema_0.7`,
+  `causal_median3`).
+- `scripts/supplementary/generate_low_label_subsets.py` generates deterministic
+  `(subject, action)`-stratified M4Human training subsets (e.g., 10%, 25%, 50%)
+  consumed via `m4human.train_subset_indices_path`.
+
 ### Qualitative and diagnostic figures
 
 - `scripts/visualization/error_bucket_pose_figure.py` selects and renders the
